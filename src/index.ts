@@ -1,14 +1,22 @@
 import express from 'express';
 
 const app = express();
-app.use(express.json());
-
 const PORT = 3000;
+const morgan = require('morgan');
+const userRoutes = require('./routes/usuarios');
 
-app.get('/sd', (req, res) => {
-    res.send('Hello World2!');
+
+// Middleware
+app.use(express.json());
+app.use(morgan('dev'));
+
+// Rutas
+app.get('/', (req, res) => {
+    res.send('Hello World!');
 });
+app.use('/api/usuarios', userRoutes);
 
+// Iniciar el servidor
 app.listen(PORT, () => {
-    console.log(`Server is running at http://localhost:${PORT}`);
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
