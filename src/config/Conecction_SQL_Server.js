@@ -1,17 +1,39 @@
 const sql = require('mssql');
+const winston = require('winston');
+require('dotenv').config();
+
 
 // Configuración de la conexión a SQL Server
 const dbConfig = {
-  user: 'sa',
-  password: 'codBO123',
-  server: 'ARCHER\\DINNOVA',
-  database: 'Prueba',
-  port: 1433,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  server: process.env.DB_SERVER,
+  database: process.env.DB_NAME,
+  port: parseInt(process.env.DB_PORT),
   options: {
     encrypt: true,
     trustServerCertificate: true,
   },
 };
+
+// Logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'database.log' }),
+  ],
+});
+
+// Validación de configuración
+function validateConfig(config) {
+  if (!config.user || !config.password || !config.server || !config.database) {
+    throw new Error('Configuración de la base de datos incompleta.');
+  }
+}
+
+validateConfig(dbConfig);
 
 // Crear el pool de conexiones
 let poolPromise;
@@ -22,23 +44,38 @@ async function getConnection() {
       poolPromise = new sql.ConnectionPool(dbConfig)
         .connect()
         .then(pool => {
-          console.log('Pool de conexión creado.');
+          logger.info('Pool de conexión creado.');
           return pool;
         })
         .catch(err => {
-          console.error('Error al crear el pool de conexión:', err);
+          logger.error('Error al crear el pool de conexión:', err);
           poolPromise = null; // Reinicia el pool en caso de error
-          throw err;
+          throw new Error(`Error al conectar a SQL Server: ${err.message}`);
         });
     }
     return poolPromise;
   } catch (err) {
-    console.error('Error al conectar a SQL Server:', err);
+    logger.error('Error inesperado:', err);
+    throw new Error(`Error inesperado: ${err.message}`);
+  }
+}
+
+async function closePool() {
+  try {
+    if (poolPromise) {
+      const pool = await poolPromise;
+      await pool.close();
+      logger.info('Pool de conexión cerrado.');
+      poolPromise = null;
+    }
+  } catch (err) {
+    logger.error('Error al cerrar el pool de conexión:', err);
     throw err;
   }
 }
 
 module.exports = {
   getConnection,
+  closePool,
   sql,
 };

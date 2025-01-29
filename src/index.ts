@@ -5,7 +5,7 @@ import { Server } from 'socket.io';
 // Importar eventos
 const authEvents = require('./events/auth');
 const userEvents = require('./events/usuarios');
-
+const poaEvents = require('./events/poa');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,7 +17,7 @@ const io = new Server(server, {
 });
 const morgan = require('morgan');
 
-const PORT = 3000;
+const PORT = 3001;
 
 // Middleware
 app.use(express.json());
@@ -35,6 +35,7 @@ io.on('connection', (socket) => {
     // Registrar eventos de autenticación
     authEvents(io, socket);
     userEvents(io, socket);
+    poaEvents(io, socket);
 
     socket.on('disconnect', () => {
         console.log(`Cliente desconectado: ${socket.id}`);

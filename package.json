@@ -28,6 +28,7 @@
     "morgan": "^1.10.0",
     "mssql": "^11.0.1",
     "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "winston": "^3.17.0"
   }
 }
