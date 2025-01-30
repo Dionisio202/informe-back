@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
-
+const cors = require("cors");
 // Importar eventos
 const authEvents = require('./events/auth');
 const userEvents = require('./events/usuarios');
@@ -10,6 +10,12 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true
+}));
 const io = new Server(server, {
     cors: {
         origin: process.env.CORS_ORIGIN,
