@@ -21,9 +21,9 @@ socket.on("connect", () => {
   };
 
   // Emitir el evento para agregar actividad
-  socket.emit("add_poa", nuevaActividad, (response) => {
+  socket.emit("get_poas",(response) => {
     if (response.success) {
-      console.log("✅ Actividad agregada correctamente:", response.message);
+      console.log("✅ Actividad agregada correctamente:", response.data);
     } else {
       console.error("❌ Error al agregar actividad:", response.message);
     }

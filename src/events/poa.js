@@ -8,6 +8,7 @@ module.exports = (io, socket) => {
       try {
         const pool = await getConnection();
         const result = await pool.request().execute("ObtenerActividades");
+        console.log("Datos enviados al cliente:", result.recordset);
         callback({ success: true, data: result.recordset }); // Respuesta con las actividades de POA
       } catch (err) {
         console.error("Error al obtener poa:", err);
@@ -30,6 +31,9 @@ module.exports = (io, socket) => {
           gasto_b_capital,
           total_actividad,
           responsables,
+          gastos_b_servicios,
+          anio,
+          linea_base,
         } = poa;
   
         const pool = await getConnection();
@@ -46,6 +50,9 @@ module.exports = (io, socket) => {
           .input("gasto_b_capital", sql.Int, gasto_b_capital)
           .input("total_actividad", sql.Int, total_actividad)
           .input("responsables", sql.NVarChar, JSON.stringify(responsables))
+          .input("gastos_b_servicios", sql.Int, gastos_b_servicios)
+          .input("anio", sql.Int, anio)
+          .input("linea_base", sql.Int, linea_base)
           .execute("InsertarActividadConResponsables");
   
         callback({ success: true, message: "Actividad agregada correctamente" });
@@ -96,6 +103,9 @@ module.exports = (io, socket) => {
           gasto_b_capital,
           total_actividad,
           responsables,
+          gastos_b_servicios,
+          anio,
+          linea_base,
         } = poa;
   
         const pool = await getConnection();
@@ -113,6 +123,9 @@ module.exports = (io, socket) => {
           .input("gasto_b_capital", sql.Int, gasto_b_capital)
           .input("total_actividad", sql.Int, total_actividad)
           .input("responsables", sql.NVarChar, JSON.stringify(responsables))
+          .input("gastos_b_servicios", sql.Int, gastos_b_servicios)
+          .input("anio", sql.Int, anio)
+          .input("linea_base", sql.Int, linea_base)
           .execute("EditarActividadConResponsables");
   
         callback({
