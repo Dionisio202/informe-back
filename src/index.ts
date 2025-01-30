@@ -6,6 +6,7 @@ import { Server } from 'socket.io';
 const authEvents = require('./events/auth');
 const userEvents = require('./events/usuarios');
 const poaEvents = require('./events/poa');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);

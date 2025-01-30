@@ -36,8 +36,8 @@ const loginUser = async (pool, { email, password }) => {
 
     const token = jwt.sign(
         { id: user.id, email: user.Email },
-        process.env.JWT_SECRET || 'mi_clave_secreta',
-        { expiresIn: '1h' }
+        process.env.JWT_SECRET,
+        { expiresIn: '6h' }
     );
 
     const sessionResult = await pool
