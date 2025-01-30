@@ -6,8 +6,7 @@ socket.on("connect", () => {
   console.log(`Conectado al servidor con ID: ${socket.id}`);
 
   const nuevaActividad = {
-    id: 3,
-    nombre_actividad: "Planificación Estratégica",
+    nombre_actividad: "Planificación Estratégica 2",
     indicador_actividad: "Cumplimiento de objetivos al 90%",
     proyeccion_actividad: "Lograr metas trimestrales",
     t1: 15,
@@ -16,12 +15,15 @@ socket.on("connect", () => {
     t4: 50,
     gastos_t_humanos: 10000,
     gasto_b_capital: 5000,
+    gasto_b_servicios: 3000,
+    anio: 2021,
+    linea_base: 10000,
     total_actividad: 15000,
     responsables: [14,13,15],
   };
 
   // Emitir el evento para agregar actividad
-  socket.emit("get_poas",(response) => {
+  socket.emit("add_poa",nuevaActividad,(response) => {
     if (response.success) {
       console.log("✅ Actividad agregada correctamente:", response.data);
     } else {

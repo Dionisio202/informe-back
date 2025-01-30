@@ -31,7 +31,7 @@ module.exports = (io, socket) => {
           gasto_b_capital,
           total_actividad,
           responsables,
-          gastos_b_servicios,
+          gasto_b_servicios,
           anio,
           linea_base,
         } = poa;
@@ -46,13 +46,13 @@ module.exports = (io, socket) => {
           .input("t2", sql.Int, t2)
           .input("t3", sql.Int, t3)
           .input("t4", sql.Int, t4)
-          .input("gastos_t_humanos", sql.Int, gastos_t_humanos)
-          .input("gasto_b_capital", sql.Int, gasto_b_capital)
-          .input("total_actividad", sql.Int, total_actividad)
+          .input("gastos_t_humanos", sql.Float, gastos_t_humanos)
+          .input("gasto_b_capital", sql.Float, gasto_b_capital)
+          .input("total_actividad", sql.Float, total_actividad)
           .input("responsables", sql.NVarChar, JSON.stringify(responsables))
-          .input("gastos_b_servicios", sql.Int, gastos_b_servicios)
+          .input("gasto_b_servicios", sql.Float, gasto_b_servicios)
           .input("anio", sql.Int, anio)
-          .input("linea_base", sql.Int, linea_base)
+          .input("linea_base", sql.Float, linea_base)
           .execute("InsertarActividadConResponsables");
   
         callback({ success: true, message: "Actividad agregada correctamente" });
@@ -103,7 +103,7 @@ module.exports = (io, socket) => {
           gasto_b_capital,
           total_actividad,
           responsables,
-          gastos_b_servicios,
+          gasto_b_servicios,
           anio,
           linea_base,
         } = poa;
@@ -119,13 +119,13 @@ module.exports = (io, socket) => {
           .input("t2", sql.Int, t2)
           .input("t3", sql.Int, t3)
           .input("t4", sql.Int, t4)
-          .input("gastos_t_humanos", sql.Int, gastos_t_humanos)
-          .input("gasto_b_capital", sql.Int, gasto_b_capital)
-          .input("total_actividad", sql.Int, total_actividad)
+          .input("gastos_t_humanos", sql.Float, gastos_t_humanos)
+          .input("gasto_b_capital", sql.Float, gasto_b_capital)
+          .input("total_actividad", sql.Float, total_actividad)
           .input("responsables", sql.NVarChar, JSON.stringify(responsables))
-          .input("gastos_b_servicios", sql.Int, gastos_b_servicios)
+          .input("gasto_b_servicios", sql.Float, gasto_b_servicios)
           .input("anio", sql.Int, anio)
-          .input("linea_base", sql.Int, linea_base)
+          .input("linea_base", sql.Float, linea_base)
           .execute("EditarActividadConResponsables");
   
         callback({
