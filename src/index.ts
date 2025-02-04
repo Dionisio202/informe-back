@@ -3,6 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import fs from 'fs';
 import path from 'path';
+import { Request, Response } from 'express-serve-static-core';
 const cors = require("cors");
 // Importar eventos
 const authEvents = require('./events/auth');
@@ -51,16 +52,26 @@ io.on('connection', (socket) => {
     });
 });
 
-// Ruta para obtener un documento
-app.get('/api/document', (req, res) => {
-  const filePath = path.join(__dirname, 'documents', 'test-document.docx');
-  if (fs.existsSync(filePath)) {
-    res.sendFile(filePath);
-    console.log('Documento enviado correctamente y d');
-  } else {
-    res.status(404).send('El documento no existe');
-  }
+// http://localhost:3001/api/document?nombre=Formato_solicitud_registro.docx
+app.get('/api/document', (req: any, res: any) => {
+    const nombre = req.query.nombre as string; // Forzamos el tipo a string
+
+    if (!nombre) {
+        return res.status(400).send('Debe proporcionar un nombre de documento.');
+    }
+
+    const filePath = path.join(__dirname, 'documents', nombre);
+
+    if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Disposition', `attachment; filename="${nombre}"`);
+        res.setHeader('Content-Type', 'application/octet-stream'); // Tipo de archivo genérico
+        res.sendFile(filePath);
+        console.log(`Documento ${nombre} enviado correctamente`);
+    } else {
+        res.status(404).send('El documento no existe');
+    }
 });
+  
 
 // Ruta para guardar un documento
 app.post('/api/save-document', (req, res) => {
