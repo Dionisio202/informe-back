@@ -22,7 +22,7 @@ module.exports = (io, socket) => {
   
           // Convertir el array de personas a formato JSON para enviarlo a SQL Server
           const jsonAutores = JSON.stringify(personas);
-          //console.log("Autores procesados:", jsonAutores);
+          console.log("Autores procesados:", jsonAutores);
           // Obtener la conexión a la base de datos
           const pool = await getConnection();
   

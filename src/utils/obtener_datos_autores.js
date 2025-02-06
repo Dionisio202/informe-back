@@ -19,7 +19,7 @@ const valoresPorDefecto = {
   fecha_nacimiento: null, // Se enviará `null` si no se puede convertir
   direccion: "No especificado",
   correo: "No especificado",
-  porcentaje_participacion: "100",
+  porcentaje_participacion: 100,
 };
 
 // Función para verificar duplicados
@@ -141,10 +141,15 @@ function extraerDatos(text) {
     if (mapeoCampos[clave]) {
       if (clave === "Fecha de Nacimiento") {
         personaActual[mapeoCampos[clave]] = normalizarFecha(valor);
+      } else if (clave === "Porcentaje de participación") {
+        // Convertir porcentaje a número, asegurando que sea un decimal válido
+        let porcentaje = parseFloat(valor.replace("%", "").trim()); 
+        personaActual[mapeoCampos[clave]] = isNaN(porcentaje) ? 100.00 : porcentaje;
       } else {
         personaActual[mapeoCampos[clave]] = valor;
       }
     }
+
   });
 
   if (personaActual["identificacion"] !== "No especificado") {
