@@ -2,7 +2,7 @@ const { io } = require("socket.io-client");
 const fs = require("fs");
 const path = require("path");
 
-const socket = io("http://localhost:3001");
+const socket = io("http://192.168.110.55:3001");
 
 socket.on("connect", async () => {
   console.log(`✅ Conectado al servidor con ID: ${socket.id}`);
