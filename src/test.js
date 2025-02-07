@@ -9,7 +9,7 @@ socket.on("connect", async () => {
 
   try {
     // 📂 Ruta del archivo de prueba (PDF o DOCX)
-    const filePath = path.join(__dirname, "documents/autores.docx"); // Asegúrate de tener el archivo en la misma carpeta
+    const filePath = path.join(__dirname, "documents/autores2.pdf"); // Asegúrate de tener el archivo en la misma carpeta
     if (!fs.existsSync(filePath)) {
       throw new Error("❌ Archivo no encontrado: " + filePath);
     }

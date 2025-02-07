@@ -36,9 +36,7 @@ function normalizarFecha(fecha) {
   }
 
   // **1️⃣ Eliminar espacios extra**
-  console.log("Fecha original:", fecha);
   fecha = fecha.replace(/\s+/g, " ").trim().toLowerCase(); // Convertir a minúsculas para uniformidad
-  console.log("Fecha sin espacios:", fecha);
 
   // **2️⃣ Verificar si el formato es "DD de MES de YYYY" o con número de mes**
   const regexTexto = /^(\d{1,2})\s+de\s+([a-zA-Z]+)\s+de\s+(\d{4})$/i;
@@ -97,6 +95,36 @@ function normalizarFecha(fecha) {
   return null; // Si no pudo convertir, devuelve `null`
 }
 
+// Función para validar correos electrónicos
+function validarCorreo(correo) {
+  const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regexCorreo.test(correo);
+}
+
+// Función para normalizar correos electrónicos
+function normalizarCorreo(correo) {
+  if (!correo || typeof correo !== "string") {
+    return null; // Si no es un string válido, devuelve null
+  }
+
+  // Eliminar espacios al principio y al final
+  correo = correo.trim();
+
+  // Eliminar espacios adicionales entre caracteres
+  correo = correo.replace(/\s+/g, "");
+
+  // Convertir a minúsculas para uniformidad
+  correo = correo.toLowerCase();
+
+  // Validar el correo
+  if (!validarCorreo(correo)) {
+    console.warn(`⚠️ Correo no válido: ${correo}`);
+    return null;
+  }
+
+  return correo;
+}
+
 // Función para extraer datos del texto
 function extraerDatos(text) {
   const textoProcesado = text.replace(/\n+/g, "\n");
@@ -143,8 +171,10 @@ function extraerDatos(text) {
         personaActual[mapeoCampos[clave]] = normalizarFecha(valor);
       } else if (clave === "Porcentaje de participación") {
         // Convertir porcentaje a número, asegurando que sea un decimal válido
-        let porcentaje = parseFloat(valor.replace("%", "").trim()); 
+        let porcentaje = parseFloat(valor.replace("%", "").trim());
         personaActual[mapeoCampos[clave]] = isNaN(porcentaje) ? 100.00 : porcentaje;
+      } else if (clave === "Correo Electrónico") {
+        personaActual[mapeoCampos[clave]] = normalizarCorreo(valor); // Normalizar y validar correo
       } else {
         personaActual[mapeoCampos[clave]] = valor;
       }
