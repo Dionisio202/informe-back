@@ -9,6 +9,7 @@ const cors = require("cors");
 const authEvents = require('./events/auth');
 const userEvents = require('./events/usuarios');
 const poaEvents = require('./events/poa');
+const emailEvents = require('./events/email');
 require('dotenv').config();
 
 const app = express();
@@ -46,7 +47,7 @@ io.on('connection', (socket) => {
     authEvents(io, socket);
     userEvents(io, socket);
     poaEvents(io, socket);
-
+    emailEvents(io, socket);
     socket.on('disconnect', () => {
         console.log(`Cliente desconectado: ${socket.id}`);
     });
@@ -74,31 +75,31 @@ app.get('/api/document', (req: any, res: any) => {
   
 
 // Ruta para guardar un documento
-app.post('/api/save-document', (req, res) => {
-console.log('Datos recibidos:', req.body);  // Agrega esta línea para inspeccionar los datos
-const filePath = path.join(__dirname, 'documents', 'saved-document.docx');
-const documentData = req.body;
+app.post('/api/save-document', (req:any, res:any) => {
+    console.log('📥 Datos recibidos en el callback:', req.body); // <-- Agrega esto
 
-if (documentData?.url) {
+    if (!req.body || !req.body.url || !req.body.key) {
+        console.error('❌ Datos inválidos recibidos:', req.body);
+        return res.status(400).json({ error: 'Datos inválidos recibidos' });
+    }
+
+    const filePath = path.join(__dirname, 'documents', `${req.body.key}.docx`);
     const file = fs.createWriteStream(filePath);
-    const request = http.get(documentData.url, (response) => {
+
+    http.get(req.body.url, (response) => {
         response.pipe(file);
         file.on('finish', () => {
             file.close(() => {
-                console.log('Documento guardado correctamente');
-                res.status(200).send('Documento guardado correctamente');
+                console.log('✅ Documento guardado correctamente:', filePath);
+                res.status(200).json({ message: 'Documento guardado correctamente' }); // 🔹 JSON en lugar de string
             });
         });
+    }).on('error', (err) => {
+        console.error('❌ Error al descargar el documento:', err);
+        res.status(500).json({ error: 'Error al guardar el documento' }); // 🔹 JSON en lugar de string
     });
-
-    request.on('error', (err) => {
-        console.error('Error al descargar el documento:', err);
-        res.status(500).send('Error al guardar el documento');
-    });
-} else {
-    res.status(400).send('Datos inválidos recibidos');
-}
 });
+
 
 // Iniciar el servidor
 server.listen(PORT, () => {
