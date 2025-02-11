@@ -19,10 +19,12 @@
     "typescript": "5.7.3"
   },
   "dependencies": {
+    "angular-expressions": "^1.4.3",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
+    "docxtemplater": "^3.59.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "file-type": "^20.1.0",
@@ -33,6 +35,7 @@
     "nodemailer": "^6.10.0",
     "pdf-parse": "^1.1.1",
     "pdf2json": "^3.1.5",
+    "pizzip": "^3.1.8",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "winston": "^3.17.0"
