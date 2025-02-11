@@ -60,10 +60,10 @@ module.exports = (io, socket) => {
             // Ejecutar la consulta INSERT
             await pool.request()
                 .input("id_funcionario", sql.Int, id_funcionario) // ID del funcionario
-                .input("id_proceso", sql.Int, id_proceso) // ID del proceso
+                .input("id_registro", sql.Int, id_proceso) // ID del proceso
                 .query(`
-                    INSERT INTO tu_tabla (id_funcionario, fecha_registro, fecha_finalizacion, estado, id_autoridad, estado_proceso, id_proceso)
-                    VALUES (@id_funcionario, GETDATE(), NULL, 0.00, NULL, 'iniciado', @id_proceso)
+                    INSERT INTO tu_tabla (id_funcionario, fecha_registro, fecha_finalizacion, estado, id_autoridad, estado_proceso, id_registro)
+                    VALUES (@id_funcionario, GETDATE(), NULL, 0.00, NULL, 'iniciado', @id_registro)
                 `);
     
             console.log("Registro creado correctamente");
@@ -75,32 +75,37 @@ module.exports = (io, socket) => {
         }
     });
     
+
     // Evento para agregar productos a un registro de patente
-    socket.on("agregar_producto", async (data, callback) => {
+    socket.on("agregar_producto_datos", async (data, callback) => {
         try {
-            const { id_proceso, id_tipo_producto, nombre_producto, proyecto_per, } = data;
+            const { id_registro, productos, autoridad, proyecto, memorando } = data;
     
-            if (!id_proceso || !id_tipo_producto || !nombre_producto) {
-                return callback({ success: false, message: "Estos campos son obligatorios" });
+            if (!id_registro || !productos || !autoridad || !proyecto || !memorando) {
+                return callback({ success: false, message: "Todos los campos son obligatorios" });
             }
+    
+            // Crear el JSON que se enviará al procedimiento almacenado
+            const jsonData = JSON.stringify({
+                id_registro: id_registro,
+                productos: productos,
+                autoridad: autoridad,
+                proyecto: proyecto,
+                memorando: memorando
+            });
     
             const pool = await getConnection();
     
-            // Ejecutar la consulta INSERT
+            // Ejecutar el procedimiento almacenado
             await pool.request()
-                .input("id_registro", sql.Int, id_registro) // ID del registro
-                .input("id_tipo_producto", sql.Int, id_tipo_producto) // ID del tipo de producto
-                .input("nombre_producto", sql.NVarChar, nombre_producto) // Nombre del producto
-                .input("descripcion_producto", sql.NVarChar, descripcion_producto) // Descripción del producto
-                .query(`
-                    INSERT INTO Productos (id_registro, id_tipo_producto, nombre_producto, descripcion_producto)
-                    VALUES (@id_registro, @id_tipo_producto, @nombre_producto, @descripcion_producto)
-                `);
-            console.log("Producto agregado correctamente");
-            callback({ success: true, message: "Producto agregado correctamente" });
+                .input("json", sql.NVarChar, jsonData) // Pasar el JSON como parámetro
+                .query(`EXEC InsertarRegistroConDatos @json`);
+    
+            console.log("Datos procesados correctamente");
+            callback({ success: true, message: "Datos procesados correctamente" });
         } catch (err) {
-            console.error("Error al agregar el producto:", err);
-            callback({ success: false, message: "Error al agregar el producto" });
+            console.error("Error al procesar los datos:", err);
+            callback({ success: false, message: "Error al procesar los datos" });
         }
     });
 
