@@ -11,6 +11,7 @@ const userEvents = require('./events/usuarios');
 const poaEvents = require('./events/poa');
 const emailEvents = require('./events/email');
 const patenteEvents = require('./events/patente');
+const form4Events = require('./events/form4');
 require('dotenv').config();
 
 const app = express();
@@ -54,6 +55,8 @@ io.on('connection', (socket) => {
     emailEvents(io, socket);
     // Registrar eventos de patentes
     patenteEvents(io, socket);
+    // Registrar eventos de form4
+    //form4Events(io, socket);
     socket.on('disconnect', () => {
         console.log(`Cliente desconectado: ${socket.id}`);
     });
