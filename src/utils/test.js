@@ -38,8 +38,7 @@ function generarContrato(jsonData, outputFileName) {
             ...jsonData,
             autores: jsonData.autores.map((autor, index) => ({
                 ...autor,
-                isLast: index === jsonData.autores.length - 1,
-                needsComma: index < jsonData.autores.length - 1
+                index: index + 1 // Añadir el índice para usarlo en la plantilla
             }))
         };
         console.log('Datos preparados:', data);
