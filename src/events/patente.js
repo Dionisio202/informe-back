@@ -63,8 +63,8 @@ module.exports = (io, socket) => {
       await pool
         .request()
         .input("id_funcionario", sql.Int, id_funcionario) // ID del funcionario
-        .input("id_registro", sql.Int, id_proceso) // ID del proceso
-        .input("id_proceso", sql.Int, id_caso) // ID del caso
+        .input("id_registro", sql.Int, id_caso) // ID del proceso
+        .input("id_proceso", sql.Int, id_proceso) // ID del caso
         .query(`
                     INSERT INTO Registros (id_funcionario, fecha_registro, fecha_finalizacion, estado, id_autoridad, estado_proceso, id_registro, id_proceso)
                     VALUES (@id_funcionario, GETDATE(), NULL, 0.00, NULL, 'iniciado', @id_registro, @id_proceso)
@@ -160,6 +160,44 @@ module.exports = (io, socket) => {
       callback({
         success: false,
         message: "Error al guardar autores en la base de datos",
+      });
+    }
+  });
+
+  // Evento para guardar los estados temporales de los formularios
+  socket.on("guardar_estado_temporal", async (data, callback) => {
+    try {
+      const { id_registro, id_tarea, jsonData } = data; // Extraer los datos del objeto data
+  
+      // Obtener la conexión a la base de datos
+      const pool = await getConnection();
+  
+      // Usar MERGE para hacer un "upsert" (insertar o actualizar)
+      await pool
+        .request()
+        .input("id_registro", sql.Int, id_registro) // ID del funcionario
+        .input("id_tarea", sql.BigInt, id_tarea) // ID del proceso
+        .input("jsonData", sql.VarChar, jsonData) // Datos JSON
+        .query(`
+          MERGE INTO Tareas_Instancia AS target
+          USING (VALUES (@id_registro, @id_tarea, @jsonData)) AS source (id_registro, id_tarea, jsonData)
+          ON target.id_registro = source.id_registro AND target.id_tarea = source.id_tarea
+          WHEN MATCHED THEN
+            UPDATE SET jsonData = source.jsonData
+          WHEN NOT MATCHED THEN
+            INSERT (id_registro, id_tarea, jsonData)
+            VALUES (source.id_registro, source.id_tarea, source.jsonData);
+        `);
+  
+      console.log("Estado temporal guardado o actualizado correctamente");
+  
+      // Enviar respuesta de éxito al cliente
+      callback({ success: true, message: "Estado temporal guardado o actualizado correctamente" });
+    } catch (err) {
+      console.error("Error al guardar o actualizar el estado temporal:", err);
+      callback({
+        success: false,
+        message: "Error al guardar o actualizar el estado temporal",
       });
     }
   });
