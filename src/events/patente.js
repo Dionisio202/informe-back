@@ -59,22 +59,33 @@ module.exports = (io, socket) => {
 
       const pool = await getConnection();
 
-      // Ejecutar la consulta INSERT
+      // Usar MERGE para evitar duplicados
       await pool
         .request()
         .input("id_funcionario", sql.Int, id_funcionario) // ID del funcionario
-        .input("id_registro", sql.Int, id_caso) // ID del proceso
-        .input("id_proceso", sql.Int, id_proceso) // ID del caso
+        .input("id_registro", sql.Int, id_caso) // ID del caso
+        .input("id_proceso", sql.Int, id_proceso) // ID del proceso
         .query(`
-                    INSERT INTO Registros (id_funcionario, fecha_registro, fecha_finalizacion, estado, id_autoridad, estado_proceso, id_registro, id_proceso)
-                    VALUES (@id_funcionario, GETDATE(), NULL, 0.00, NULL, 'iniciado', @id_registro, @id_proceso)
-                `);
+                MERGE INTO Registros AS target
+                USING (VALUES (@id_funcionario, @id_registro, @id_proceso)) 
+                AS source (id_funcionario, id_registro, id_proceso)
+                ON target.id_registro = source.id_registro AND target.id_proceso = source.id_proceso
+                WHEN NOT MATCHED THEN
+                    INSERT (id_funcionario, fecha_registro, fecha_finalizacion, estado, id_autoridad, estado_proceso, id_registro, id_proceso)
+                    VALUES (source.id_funcionario, GETDATE(), NULL, 0.00, NULL, 'iniciado', source.id_registro, source.id_proceso);
+            `);
 
-      console.log("Registro creado correctamente");
-      callback({ success: true, message: "Registro creado correctamente" });
+      console.log("Registro creado o verificado correctamente");
+      callback({
+        success: true,
+        message: "Registro creado o verificado correctamente",
+      });
     } catch (err) {
-      console.error("Error al crear el registro:", err);
-      callback({ success: false, message: "Error al crear el registro" });
+      console.error("Error al crear o verificar el registro:", err);
+      callback({
+        success: false,
+        message: "Error al crear o verificar el registro",
+      });
     }
   });
 
@@ -168,10 +179,10 @@ module.exports = (io, socket) => {
   socket.on("guardar_estado_temporal", async (data, callback) => {
     try {
       const { id_registro, id_tarea, jsonData } = data; // Extraer los datos del objeto data
-  
+
       // Obtener la conexión a la base de datos
       const pool = await getConnection();
-  
+
       // Usar MERGE para hacer un "upsert" (insertar o actualizar)
       await pool
         .request()
@@ -188,11 +199,14 @@ module.exports = (io, socket) => {
             INSERT (id_registro, id_tarea, jsonData)
             VALUES (source.id_registro, source.id_tarea, source.jsonData);
         `);
-  
+
       console.log("Estado temporal guardado o actualizado correctamente");
-  
+
       // Enviar respuesta de éxito al cliente
-      callback({ success: true, message: "Estado temporal guardado o actualizado correctamente" });
+      callback({
+        success: true,
+        message: "Estado temporal guardado o actualizado correctamente",
+      });
     } catch (err) {
       console.error("Error al guardar o actualizar el estado temporal:", err);
       callback({
