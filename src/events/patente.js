@@ -52,7 +52,7 @@ module.exports = (io, socket) => {
       const { id_funcionario, id_proceso, id_caso } = data;
 
       //Id combinado
-      const id_registro = id_caso + "-" + id_proceso;
+      const id_registro = id_proceso + "-" + id_caso;
 
       if (!id_funcionario) {
         return callback({
