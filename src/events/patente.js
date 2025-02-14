@@ -1,6 +1,6 @@
 const { getConnection, sql } = require("../config/Conecction_SQL_Server");
 const { procesarArchivoAutores } = require("../utils/obtener_datos_autores"); // Importar la función para procesar documentos
-const { procesarArchivoProductos, procesarArchivoProducto } = require("../utils/obtener_datos_producto"); // Importar la función para procesar documentos
+const { procesarArchivoProducto } = require("../utils/obtener_datos_producto"); // Importar la función para procesar documentos
 
 module.exports = (io, socket) => {
   console.log('📌 Evento WebSocket "patente" registrado');
@@ -51,6 +51,9 @@ module.exports = (io, socket) => {
     try {
       const { id_funcionario, id_proceso, id_caso } = data;
 
+      //Id combinado
+      const id_registro = id_caso + "-" + id_proceso;
+
       if (!id_funcionario) {
         return callback({
           success: false,
@@ -64,7 +67,7 @@ module.exports = (io, socket) => {
       await pool
         .request()
         .input("id_funcionario", sql.Int, id_funcionario) // ID del funcionario
-        .input("id_registro", sql.Int, id_caso) // ID del caso
+        .input("id_registro", sql.Int, id_registro) // ID del caso
         .input("id_proceso", sql.Int, id_proceso) // ID del proceso
         .query(`
                 MERGE INTO Registros AS target
@@ -93,32 +96,37 @@ module.exports = (io, socket) => {
   // Evento para agregar productos a un registro de patente
   socket.on("agregar_producto_datos", async (data, callback) => {
     try {
-      const { id_registro, productos, autoridad, proyecto, memorando } = data;
-
-      if (!id_registro || !productos || !autoridad || !proyecto || !memorando) {
+      const { id_registro, jsonProductos, memorando } = data;
+      // Validar que todos los campos estén presentes
+      if (!id_registro || !jsonProductos || !memorando) {
         return callback({
           success: false,
           message: "Todos los campos son obligatorios",
         });
       }
-
+      // Parsear el JSON de productos (datos extraídos del documento)
+      const datosDocumento = JSON.parse(jsonProductos);
       // Crear el JSON que se enviará al procedimiento almacenado
       const jsonData = JSON.stringify({
-        id_registro: id_registro,
-        productos: productos,
-        autoridad: autoridad,
-        proyecto: proyecto,
-        memorando: memorando,
+        id_registro: id_registro, // Identificador del registro
+        productos: datosDocumento.productos, // Productos extraídos del documento
+        autoridad: {
+          nombre: datosDocumento.solicitante.nombre,
+          Rol: datosDocumento.solicitante.cargo,
+          facultad: "definir en el formato",
+        },
+        proyecto: {
+          nombre: datosDocumento.proyecto.titulo,
+          codigo: datosDocumento.proyecto.resolucion.numero,
+        },
+        memorando: memorando, // Número o identificador del memorando
       });
-
       const pool = await getConnection();
-
       // Ejecutar el procedimiento almacenado
       await pool
         .request()
         .input("json", sql.NVarChar, jsonData) // Pasar el JSON como parámetro
         .query(`EXEC InsertarRegistroConDatos @json`);
-
       console.log("Datos procesados correctamente");
       callback({ success: true, message: "Datos procesados correctamente" });
     } catch (err) {
@@ -129,7 +137,7 @@ module.exports = (io, socket) => {
 
   // Evento de procesamiento de doeumentos y extracción de datos de productos y autores para previsualización en el Front
   socket.on("procesar_documentos", async (data, callback) => {
-    const {documento_autores, documento_productos} = data;
+    const { documento_autores, documento_productos } = data;
     try {
       // Procesar el documento de autores y obtener la lista de autores en formato JSON
       const autores = await procesarArchivoAutores(documento_autores);
@@ -152,7 +160,7 @@ module.exports = (io, socket) => {
         success: true,
         message: "Datos procesados correctamente",
         autores: jsonAutores,
-        productos: jsonProductos
+        productos: jsonProductos,
       });
     } catch (err) {
       console.error("Error al procesar los documentos:", err);
@@ -164,58 +172,61 @@ module.exports = (io, socket) => {
   });
 
   // Evento para guardar los autores de un registro de patente
-  socket.on("set_autores", async (data, callback) => {
-    try {
-      const { codigo, documento } = data; // Extraer el código y el documento del objeto data
+  // socket.on("set_autores", async (data, callback) => {
+  //   try {
+  //     const { codigo, documento } = data; // Extraer el código y el documento del objeto data
 
-      if (!codigo || !documento) {
-        return callback({
-          success: false,
-          message: "Código y documento son obligatorios",
-        });
-      }
+  //     if (!codigo || !documento) {
+  //       return callback({
+  //         success: false,
+  //         message: "Código y documento son obligatorios",
+  //       });
+  //     }
 
-      // Procesar el documento (PDF o DOCX) y obtener la lista de autores en formato JSON
-      const personas = await procesarArchivo(documento);
+  //     // Procesar el documento (PDF o DOCX) y obtener la lista de autores en formato JSON
+  //     const personas = await procesarArchivo(documento);
 
-      if (personas.length === 0) {
-        return callback({
-          success: false,
-          message: "No se encontraron datos válidos en el documento",
-        });
-      }
+  //     if (personas.length === 0) {
+  //       return callback({
+  //         success: false,
+  //         message: "No se encontraron datos válidos en el documento",
+  //       });
+  //     }
 
-      // Convertir el array de personas a formato JSON para enviarlo a SQL Server
-      const jsonAutores = JSON.stringify(personas);
-      console.log("Autores procesados:", jsonAutores);
-      // Obtener la conexión a la base de datos
-      const pool = await getConnection();
+  //     // Convertir el array de personas a formato JSON para enviarlo a SQL Server
+  //     const jsonAutores = JSON.stringify(personas);
+  //     console.log("Autores procesados:", jsonAutores);
+  //     // Obtener la conexión a la base de datos
+  //     const pool = await getConnection();
 
-      // Ejecutar el procedimiento almacenado con el JSON de autores y el código de registro
-      await pool
-        .request()
-        .input("jsonAutores", sql.NVarChar, jsonAutores) // Enviar el JSON como NVARCHAR(MAX)
-        .input("codigoRegistro", sql.Int, codigo) // Enviar el código de registro
-        .execute("ProcesarAutores"); // Llamar al procedimiento almacenado en SQL Server
+  //     // Ejecutar el procedimiento almacenado con el JSON de autores y el código de registro
+  //     await pool
+  //       .request()
+  //       .input("jsonAutores", sql.NVarChar, jsonAutores) // Enviar el JSON como NVARCHAR(MAX)
+  //       .input("codigoRegistro", sql.Int, codigo) // Enviar el código de registro
+  //       .execute("ProcesarAutores"); // Llamar al procedimiento almacenado en SQL Server
 
-      console.log("Autores guardados correctamente");
-      callback({
-        success: true,
-        message: "Autores guardados correctamente en la base de datos",
-      });
-    } catch (err) {
-      console.error("Error al guardar autores:", err);
-      callback({
-        success: false,
-        message: "Error al guardar autores en la base de datos",
-      });
-    }
-  });
+  //     console.log("Autores guardados correctamente");
+  //     callback({
+  //       success: true,
+  //       message: "Autores guardados correctamente en la base de datos",
+  //     });
+  //   } catch (err) {
+  //     console.error("Error al guardar autores:", err);
+  //     callback({
+  //       success: false,
+  //       message: "Error al guardar autores en la base de datos",
+  //     });
+  //   }
+  // });
 
   // Evento para guardar los estados temporales de los formularios
   socket.on("guardar_estado_temporal", async (data, callback) => {
     try {
       const { id_registro, id_tarea, jsonData } = data; // Extraer los datos del objeto data
+
+      //id combinado
+      const id_combinado = id_registro + "-" + id_tarea;
 
       // Obtener la conexión a la base de datos
       const pool = await getConnection();
@@ -223,10 +234,9 @@ module.exports = (io, socket) => {
       // Usar MERGE para hacer un "upsert" (insertar o actualizar)
       await pool
         .request()
-        .input("id_registro", sql.Int, id_registro) // ID del funcionario
-        .input("id_tarea", sql.BigInt, id_tarea) // ID del proceso
-        .input("jsonData", sql.VarChar, jsonData) // Datos JSON
-        .query(`
+        .input("id_registro", sql.Int, id_registro)
+        .input("id_tarea", sql.BigInt, id_combinado)
+        .input("jsonData", sql.VarChar, jsonData).query(`
           MERGE INTO Tareas_Instancia AS target
           USING (VALUES (@id_registro, @id_tarea, @jsonData)) AS source (id_registro, id_tarea, jsonData)
           ON target.id_registro = source.id_registro AND target.id_tarea = source.id_tarea
