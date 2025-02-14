@@ -1,5 +1,6 @@
 const { getConnection, sql } = require("../config/Conecction_SQL_Server");
-const { procesarArchivo } = require("../utils/obtener_datos_autores"); // Importar la función para procesar documentos
+const { procesarArchivoAutores } = require("../utils/obtener_datos_autores"); // Importar la función para procesar documentos
+const { procesarArchivoProductos, procesarArchivoProducto } = require("../utils/obtener_datos_producto"); // Importar la función para procesar documentos
 
 module.exports = (io, socket) => {
   console.log('📌 Evento WebSocket "patente" registrado');
@@ -123,6 +124,42 @@ module.exports = (io, socket) => {
     } catch (err) {
       console.error("Error al procesar los datos:", err);
       callback({ success: false, message: "Error al procesar los datos" });
+    }
+  });
+
+  // Evento de procesamiento de doeumentos y extracción de datos de productos y autores para previsualización en el Front
+  socket.on("procesar_documentos", async (data, callback) => {
+    const {documento_autores, documento_productos} = data;
+    try {
+      // Procesar el documento de autores y obtener la lista de autores en formato JSON
+      const autores = await procesarArchivoAutores(documento_autores);
+      const productos = await procesarArchivoProducto(documento_productos);
+
+      if (autores.length === 0 || productos.length === 0) {
+        return callback({
+          success: false,
+          message: "No se encontraron datos válidos en el documento",
+        });
+      }
+
+      // Convertir el array de personas a formato JSON para enviarlo al Front
+      const jsonAutores = JSON.stringify(autores);
+      const jsonProductos = JSON.stringify(productos);
+      console.log("Autores procesados:", jsonAutores);
+      console.log("Productos procesados:", jsonProductos);
+
+      callback({
+        success: true,
+        message: "Datos procesados correctamente",
+        autores: jsonAutores,
+        productos: jsonProductos
+      });
+    } catch (err) {
+      console.error("Error al procesar los documentos:", err);
+      callback({
+        success: false,
+        message: "Error al procesar los documentos",
+      });
     }
   });
 
