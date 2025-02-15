@@ -41,12 +41,7 @@ class DocumentoTester {
             // 📌 Convertir JSON strings a objetos
             const autores = JSON.parse(respuesta.autores);
             const productos = JSON.parse(respuesta.productos);
-
-            // 🔹 Mostrar información en consola
-            console.log("🔹 Primer autor:", autores[0]?.nombre || "No disponible");
-            console.log("🔹 Fecha del producto:", productos.fecha || "No disponible");
-            console.log("🔹 Proyecto:", productos.proyecto?.titulo || "No disponible");
-            console.log("🔹 Primer producto:", productos.productos?.[0]?.nombre || "No disponible");
+            console.log("Productos:", productos);
           } catch (error) {
             console.error("❌ Error al parsear la respuesta:", error);
           }
