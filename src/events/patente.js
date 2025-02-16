@@ -49,9 +49,9 @@ module.exports = (io, socket) => {
   // Evento para generar un registro de patente
   socket.on("iniciar_registro", async (data, callback) => {
     try {
-      const { id_funcionario, id_proceso, id_caso } = data;
+      const { id_funcionario, id_proceso, id_caso, nombre_proceso } = data;
 
-      //Id combinado
+      // Id combinado
       const id_registro = id_proceso + "-" + id_caso;
 
       if (!id_funcionario) {
@@ -63,21 +63,36 @@ module.exports = (io, socket) => {
 
       const pool = await getConnection();
 
-      // Usar MERGE para evitar duplicados
+      // 1️⃣ Insertar o verificar el proceso en la tabla "procesos"
+      await pool
+        .request()
+        .input("id_proceso", sql.BigInt, id_proceso) // ID del proceso
+        .input("nombre_proceso", sql.VarChar, nombre_proceso) // Nombre del proceso
+        .query(`
+          MERGE INTO procesos AS target
+          USING (VALUES (@id_proceso, @nombre_proceso)) 
+          AS source (id, name)
+          ON target.id = source.id
+          WHEN NOT MATCHED THEN
+              INSERT (id, name, description)
+              VALUES (source.id, source.name, NULL); -- description puede ser NULL o un valor por defecto
+        `);
+
+      // 2️⃣ Insertar o verificar el registro en la tabla "Registros"
       await pool
         .request()
         .input("id_funcionario", sql.Int, id_funcionario) // ID del funcionario
-        .input("id_registro", sql.varchar, id_registro) // ID del caso
+        .input("id_registro", sql.VarChar, id_registro) // ID del caso
         .input("id_proceso", sql.BigInt, id_proceso) // ID del proceso
         .query(`
-                MERGE INTO Registros AS target
-                USING (VALUES (@id_funcionario, @id_registro, @id_proceso)) 
-                AS source (id_funcionario, id_registro, id_proceso)
-                ON target.id_registro = source.id_registro AND target.id_proceso = source.id_proceso
-                WHEN NOT MATCHED THEN
-                    INSERT (id_funcionario, fecha_registro, fecha_finalizacion, estado, id_autoridad, estado_proceso, id_registro, id_proceso)
-                    VALUES (source.id_funcionario, GETDATE(), NULL, 0.00, NULL, 'iniciado', source.id_registro, source.id_proceso);
-            `);
+          MERGE INTO Registros AS target
+          USING (VALUES (@id_funcionario, @id_registro, @id_proceso)) 
+          AS source (id_funcionario, id_registro, id_proceso)
+          ON target.id_registro = source.id_registro AND target.id_proceso = source.id_proceso
+          WHEN NOT MATCHED THEN
+              INSERT (id_funcionario, fecha_registro, fecha_finalizacion, estado, id_autoridad, estado_proceso, id_registro, id_proceso)
+              VALUES (source.id_funcionario, GETDATE(), NULL, 0.00, NULL, 'iniciado', source.id_registro, source.id_proceso);
+        `);
 
       console.log("Registro creado o verificado correctamente");
       callback({
