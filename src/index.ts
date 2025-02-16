@@ -13,8 +13,6 @@ const form4Events = require('./events/form4');
 // Importar Rutas
 import documentosRoutes from './routes/documentos.routes';
 
-const router = express.Router();
-
 require('dotenv').config();
 
 const app = express();
@@ -43,7 +41,7 @@ app.get('/', (req, res) => {
     res.send('Hello World! websocket');
 });
 
-router.use('/api', documentosRoutes);
+app.use('/api', documentosRoutes);
 
 // Manejo de conexiones WebSocket
 io.on('connection', (socket) => {

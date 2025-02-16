@@ -5,6 +5,11 @@ import http from "http";
 const { getConnection, sql } = require("../config/Conecction_SQL_Server.js");
 const router = express.Router();
 
+//Ruta de prueba HTTP
+router.get("/prueba", (req, res) => {
+  res.send("Hello World! document");
+});
+
 // 📂 Ruta para descargar un documento
 router.get("/document", (req: any, res: any) => {
   const nombre = req.query.nombre as string;
@@ -33,8 +38,8 @@ router.post("/save-document", async (req, res) => {
     !req.body ||
     !req.body.url ||
     !req.body.key ||
-    !req.body.key.id_registro_per ||
-    !req.body.key.codigo ||
+    !req.body.id_registro_per ||
+    !req.body.codigo ||
     !req.body.id_tipo_documento
   ) {
     console.error("❌ Datos inválidos recibidos:", req.body);
