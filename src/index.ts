@@ -11,7 +11,7 @@ const patenteEvents = require('./events/patente');
 const form4Events = require('./events/form4');
 
 // Importar Rutas
-const documentosRoutes = require('./routes/documentos.routes');
+import documentosRoutes from './routes/documentos.routes';
 
 const router = express.Router();
 
