@@ -67,8 +67,8 @@ module.exports = (io, socket) => {
       await pool
         .request()
         .input("id_funcionario", sql.Int, id_funcionario) // ID del funcionario
-        .input("id_registro", sql.Int, id_registro) // ID del caso
-        .input("id_proceso", sql.Int, id_proceso) // ID del proceso
+        .input("id_registro", sql.varchar, id_registro) // ID del caso
+        .input("id_proceso", sql.BigInt, id_proceso) // ID del proceso
         .query(`
                 MERGE INTO Registros AS target
                 USING (VALUES (@id_funcionario, @id_registro, @id_proceso)) 
