@@ -1,6 +1,8 @@
 const { getConnection, sql } = require("../config/Conecction_SQL_Server");
 const { procesarArchivoAutores } = require("../utils/obtener_datos_autores"); // Importar la función para procesar documentos
 const { procesarArchivoProducto } = require("../utils/obtener_datos_producto"); // Importar la función para procesar documentos
+const { generarContrato} = require("../utils/generador_contrato_cesion_derechos"); // Importar la función para generar documentos
+const generarActaPP = require("../utils/generador_porcentaje_participacion"); // Importar la función para generar documentos
 
 module.exports = (io, socket) => {
   console.log('📌 Evento WebSocket "patente" registrado');
@@ -69,7 +71,7 @@ module.exports = (io, socket) => {
         .input("id_proceso", sql.BigInt, id_proceso) // ID del proceso
         .input("nombre_proceso", sql.VarChar, nombre_proceso) // Nombre del proceso
         .query(`
-          MERGE INTO procesos AS target
+          MERGE INTO Procesos AS target
           USING (VALUES (@id_proceso, @nombre_proceso)) 
           AS source (id, name)
           ON target.id = source.id
@@ -267,4 +269,42 @@ module.exports = (io, socket) => {
       });
     }
   });
+
+// Generacion de documentos
+socket.on("generar_documentos", async (data, callback) => {
+  try {
+    const { id_registro, id_tarea } = data; // Extraer los datos del objeto data
+    //id combinado
+    const id_combinado = id_registro + "-" + id_tarea;
+    // Nombre del archivo de salida
+    const outputFileNameCCDP = `Contrato_Cesion_Derechos_${id_combinado}.docx`;
+    const outputFileNameAPP = `Acta_Porcentaje_Participacion_${id_combinado}.docx`;
+    //Obtener Datos de la base de datos
+    const pool = await getConnection();
+    const result = await pool
+      .request()
+      .input("id_registro", sql.Int, id_registro)
+      .input("id_tarea", sql.BigInt, id_tarea)
+      .query(`
+        SELECT jsonData
+        FROM Tareas_Instancia
+        WHERE id_registro = @id_registro AND id_tarea = @id_tarea
+      `);
+    // Lógica para generar el documento
+    generarContrato(jsonData, outputFileName);
+
+    // Enviar respuesta de éxito al cliente
+    callback({
+      success: true,
+      message: "Documento generado correctamente",
+    });
+  } catch (err) {
+    console.error("Error al generar el documento:", err);
+    callback({
+      success: false,
+      message: "Error al generar el documento",
+    });
+  }
+});
+
 };

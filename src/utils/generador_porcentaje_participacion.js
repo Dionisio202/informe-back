@@ -57,7 +57,7 @@ function generarActaPP(jsonData, outputFileName) {
 
     // Cargar la plantilla del documento
     const plantilla = fs.readFileSync(
-      "src/documents/Formato_APP_plantilla.docx",
+      "src/documents/APP.docx",
       "binary"
     );
     const zip = new PizZip(plantilla);

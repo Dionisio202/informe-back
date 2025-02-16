@@ -48,7 +48,7 @@ function generarContrato(jsonData, outputFileName) {
 
     // Cargar la plantilla del documento
     const plantilla = fs.readFileSync(
-      "src/documents/Formato_CCDP_plantilla.docx",
+      "src/documents/CCDP.docx",
       "binary"
     );
     const zip = new PizZip(plantilla);
@@ -81,6 +81,8 @@ function generarContrato(jsonData, outputFileName) {
     throw err;
   }
 }
+
+module.exports = generarContrato;
 
 // Ejemplo de uso
 const jsonData = {
