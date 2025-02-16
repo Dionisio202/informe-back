@@ -1,16 +1,80 @@
-Error: EBUSY: resource busy or locked, open 'C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\Contrato_Cesion_Derechos_1.docx'
-    at Object.openSync (node:fs:563:18)
-    at Object.writeFileSync (node:fs:2441:35)
-    at generarContrato (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\src\utils\test.js:63:12)
-    at Object.<anonymous> (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\src\utils\test.js:98:1)
+Error: Multi error
+    at new XTTemplateError (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\errors.js:21:16)
+    at throwMultiError (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\errors.js:62:13)
+    at verifyErrors (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\docxtemplater.js:84:5)
+    at Docxtemplater.compile (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\docxtemplater.js:397:7)
+    at new Docxtemplater (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\docxtemplater.js:118:12)
+    at generarActaPP (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\src\utils\generador_porcentaje_participacion.js:66:17)
+    at Object.<anonymous> (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\src\utils\generador_porcentaje_participacion.js:137:1)
     at Module._compile (node:internal/modules/cjs/loader:1739:14)
     at Object..js (node:internal/modules/cjs/loader:1904:10)
-    at Module.load (node:internal/modules/cjs/loader:1473:32)
-    at Function._load (node:internal/modules/cjs/loader:1285:12)
-    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:234:24) {
-  errno: -4082,
-  code: 'EBUSY',
-  syscall: 'open',
-  path: 'C:\\Users\\marlo\\Documents\\WorkSpace\\DINNOVA\\informe-back\\Contrato_Cesion_Derechos_1.docx'
+    at Module.load (node:internal/modules/cjs/loader:1473:32) {
+  properties: {
+    errors: [
+      Error: Scope parser compilation failed
+          at new XTScopeParserError (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\errors.js:33:16)
+          at getScopeCompilationError (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\errors.js:255:13)
+          at Render.postparse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\modules\render.js:75:25)
+          at C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\parser.js:180:24
+          at Array.reduce (<anonymous>)
+          at _postparse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\parser.js:179:22)
+          at postparse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\parser.js:182:20)
+          at C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\modules\expand-pair-trait.js:240:32
+          at Array.reduce (<anonymous>)
+          at ExpandPairTrait.postparse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\modules\expand-pair-trait.js:220:34) {
+        properties: {
+          id: 'scopeparser_compilation_failed',
+          offset: 807,
+          xtag: '[0]nombre',
+          explanation: 'The scope parser for the tag "[0]nombre" failed to compile',
+          rootError: Error: [$parse:syntax] Syntax Error: Token 'nombre' is an unexpected token at column 4 of the expression [[0]nombre] starting at [nombre].
+          http://errors.angularjs.org/"NG_VERSION_FULL"/$parse/syntax?p0=nombre&p1=is%20an%20unexpected%20token&p2=4&p3=%5B0%5Dnombre&p4=nombre
+              at C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\parse.js:705:10
+              at AST.throwError (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\parse.js:1401:9)
+              at AST.ast (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\parse.js:1083:9)
+              at ASTCompiler.compile (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\parse.js:1656:29)
+              at Parser.parse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\parse.js:2851:27)
+              at Object.compile (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\main.js:73:45)
+              at Render.angularParser [as parser] (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\src\utils\generador_porcentaje_participacion.js:20:28)
+              at Render.postparse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\modules\render.js:71:52)
+              at C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\parser.js:180:24
+              at Array.reduce (<anonymous>),
+          file: 'word/document.xml'
+        }
+      },
+      Error: Scope parser compilation failed
+          at new XTScopeParserError (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\errors.js:33:16)
+          at getScopeCompilationError (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\errors.js:255:13)
+          at Render.postparse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\modules\render.js:75:25)
+          at C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\parser.js:180:24
+          at Array.reduce (<anonymous>)
+          at _postparse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\parser.js:179:22)
+          at postparse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\parser.js:182:20)
+          at C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\modules\expand-pair-trait.js:240:32
+          at Array.reduce (<anonymous>)
+          at ExpandPairTrait.postparse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\modules\expand-pair-trait.js:220:34) {
+        properties: {
+          id: 'scopeparser_compilation_failed',
+          offset: 893,
+          xtag: '[1]nombre',
+          explanation: 'The scope parser for the tag "[1]nombre" failed to compile',
+          rootError: Error: [$parse:syntax] Syntax Error: Token 'nombre' is an unexpected token at column 4 of the expression [[1]nombre] starting at [nombre].
+          http://errors.angularjs.org/"NG_VERSION_FULL"/$parse/syntax?p0=nombre&p1=is%20an%20unexpected%20token&p2=4&p3=%5B1%5Dnombre&p4=nombre
+              at C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\parse.js:705:10
+              at AST.throwError (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\parse.js:1401:9)
+              at AST.ast (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\parse.js:1083:9)
+              at ASTCompiler.compile (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\parse.js:1656:29)
+              at Parser.parse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\parse.js:2851:27)
+              at Object.compile (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\angular-expressions\lib\main.js:73:45)
+              at Render.angularParser [as parser] (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\src\utils\generador_porcentaje_participacion.js:20:28)
+              at Render.postparse (C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\modules\render.js:71:52)
+              at C:\Users\marlo\Documents\WorkSpace\DINNOVA\informe-back\node_modules\docxtemplater\js\parser.js:180:24
+              at Array.reduce (<anonymous>),
+          file: 'word/document.xml'
+        }
+      }
+    ],
+    id: 'multi_error',
+    explanation: 'The template has multiple errors'
+  }
 }

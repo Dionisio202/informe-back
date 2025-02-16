@@ -1,9 +1,6 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
-import fs from 'fs';
-import path from 'path';
-import { Request, Response } from 'express-serve-static-core';
 const cors = require("cors");
 // Importar eventos
 const authEvents = require('./events/auth');
@@ -12,6 +9,12 @@ const poaEvents = require('./events/poa');
 const emailEvents = require('./events/email');
 const patenteEvents = require('./events/patente');
 const form4Events = require('./events/form4');
+
+// Importar Rutas
+const documentosRoutes = require('./routes/documentos.routes');
+
+const router = express.Router();
+
 require('dotenv').config();
 
 const app = express();
@@ -40,6 +43,8 @@ app.get('/', (req, res) => {
     res.send('Hello World! websocket');
 });
 
+router.use('/api', documentosRoutes);
+
 // Manejo de conexiones WebSocket
 io.on('connection', (socket) => {
     console.log(`Cliente conectado: ${socket.id}`);
@@ -60,54 +65,6 @@ io.on('connection', (socket) => {
         console.log(`Cliente desconectado: ${socket.id}`);
     });
 });
-
-// http://localhost:3001/api/document?nombre=Formato_solicitud_registro.docx
-app.get('/api/document', (req: any, res: any) => {
-    const nombre = req.query.nombre as string; // Forzamos el tipo a string
-
-    if (!nombre) {
-        return res.status(400).send('Debe proporcionar un nombre de documento.');
-    }
-
-    const filePath = path.join(__dirname, 'documents', nombre);
-
-    if (fs.existsSync(filePath)) {
-        res.setHeader('Content-Disposition', `attachment; filename="${nombre}"`);
-        res.setHeader('Content-Type', 'application/octet-stream'); // Tipo de archivo genérico
-        res.sendFile(filePath);
-        console.log(`Documento ${nombre} enviado correctamente`);
-    } else {
-        res.status(404).send('El documento no existe');
-    }
-});
-  
-
-// Ruta para guardar un documento
-app.post('/api/save-document', (req:any, res:any) => {
-    console.log('📥 Datos recibidos en el callback:', req.body); // <-- Agrega esto
-
-    if (!req.body || !req.body.url || !req.body.key) {
-        console.error('❌ Datos inválidos recibidos:', req.body);
-        return res.status(400).json({ error: 'Datos inválidos recibidos' });
-    }
-
-    const filePath = path.join(__dirname, 'documents', `${req.body.key}.docx`);
-    const file = fs.createWriteStream(filePath);
-
-    http.get(req.body.url, (response) => {
-        response.pipe(file);
-        file.on('finish', () => {
-            file.close(() => {
-                console.log('✅ Documento guardado correctamente:', filePath);
-                res.status(200).json({ message: 'Documento guardado correctamente' }); // 🔹 JSON en lugar de string
-            });
-        });
-    }).on('error', (err) => {
-        console.error('❌ Error al descargar el documento:', err);
-        res.status(500).json({ error: 'Error al guardar el documento' }); // 🔹 JSON en lugar de string
-    });
-});
-
 
 // Iniciar el servidor
 server.listen(PORT, () => {
