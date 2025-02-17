@@ -60,7 +60,7 @@ function generarContrato(jsonData, outputFileName) {
 
     // Guardar el documento generado
     const buffer = doc.getZip().generate({ type: "nodebuffer" });
-    fs.writeFileSync(outputFileName, buffer);
+    fs.writeFileSync("src/documents/temp/"+outputFileName, buffer);
 
     console.log("Documento generado correctamente:", outputFileName);
   } catch (err) {

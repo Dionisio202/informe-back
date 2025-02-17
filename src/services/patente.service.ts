@@ -147,28 +147,50 @@ export const insertProductoDatos = async (
 
 // Guardado de documentos en la base de datos
 export const saveDocument = async (
-  documento: Documento
-): Promise<{ success: boolean; message: string }> => {
-  const { id_registro, codigo, id_tipo_documento, codigo_almacenamiento } =
-    documento;
-  try {
-    const pool = await getConnection();
-    await pool
-      .request()
-      .input("id_registro_per", sql.VarChar(50), id_registro)
-      .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
-      .input("codigo_documento", sql.VarChar(100), codigo)
-      .input("id_tipo_documento", sql.Int, id_tipo_documento).query(`
-                        INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, codigo_documento, id_tipo_documento) 
-                        VALUES (@id_registro_per, @codigo_almacenamiento, @codigo_documento, @id_tipo_documento)
-                    `);
-
-    console.log("✅ Datos insertados en la base de datos");
-    return {
-      success: true,
-      message: "Documento guardado e información insertada en la BD",
-    };
-  } catch (dbError) {
-    return { success: false, message: "Error al guardar los datos en la BD" };
-  }
-};
+    documento: Documento
+  ): Promise<{ success: boolean; message: string }> => {
+    const { id_registro, codigo_documento, id_tipo_documento, codigo_almacenamiento } =
+      documento;
+    try {
+      const pool = await getConnection();
+  
+      // Verificar si el codigo_documento ya existe en la base de datos
+      const existingDocument = await pool
+        .request()
+        .input("codigo_documento", sql.VarChar(100), codigo_documento)
+        .query(`
+          SELECT COUNT(*) AS count
+          FROM Documentos
+          WHERE codigo_documento = @codigo_documento
+        `);
+  
+      if (existingDocument.recordset[0].count > 0) {
+        console.log("⚠️ El documento con el código ya existe.");
+        return {
+          success: false,
+          message: "El documento con el código ya existe en la base de datos",
+        };
+      }
+  
+      // Si no existe, proceder a insertar el nuevo registro
+      await pool
+        .request()
+        .input("id_registro_per", sql.VarChar(50), id_registro)
+        .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
+        .input("codigo_documento", sql.VarChar(100), codigo_documento)
+        .input("id_tipo_documento", sql.Int, id_tipo_documento)
+        .query(`
+          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, codigo_documento, id_tipo_documento) 
+          VALUES (@id_registro_per, @codigo_almacenamiento, @codigo_documento, @id_tipo_documento)
+        `);
+  
+      console.log("✅ Datos insertados en la base de datos");
+      return {
+        success: true,
+        message: "Documento guardado e información insertada en la BD",
+      };
+    } catch (dbError) {
+      console.error(dbError);
+      return { success: false, message: "Error al guardar los datos en la BD" };
+    }
+  };

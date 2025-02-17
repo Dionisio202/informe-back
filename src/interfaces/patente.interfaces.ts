@@ -20,6 +20,6 @@ export interface Registro {
     id_registro: string;
     id_tipo_documento: number;
     codigo_almacenamiento: string;
-    codigo: string;
+    codigo_documento: string;
     id_docuemnto_per: string;
   }
