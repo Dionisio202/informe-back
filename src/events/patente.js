@@ -326,7 +326,7 @@ module.exports = (io, socket) => {
       // Enviar respuesta de éxito al cliente
       callback({
         success: true,
-        message: "Documento generado correctamente",
+        message: "Documentos generado correctamente",
         documentNames: {
           CCDP: outputFileNameCCDP,
           APP: outputFileNameAPP,
