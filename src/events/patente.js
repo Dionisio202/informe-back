@@ -3,155 +3,57 @@ const { procesarArchivoAutores } = require("../utils/obtener_datos_autores"); //
 const { procesarArchivoProducto } = require("../utils/obtener_datos_producto"); // Importar la función para procesar documentos
 const generarContrato = require("../utils/generador_contrato_cesion_derechos"); // Importar la función para generar documentos
 const generarActaPP = require("../utils/generador_porcentaje_participacion"); // Importar la función para generar documentos
+const { getAutoridades, getTiposProductos, insertProceso, insertRegistro, saveDocument} = require("../services/patente.service");
+// Variables de entorno
+require("dotenv").config();
 
 module.exports = (io, socket) => {
   console.log('📌 Evento WebSocket "patente" registrado');
 
   // Evento para obtener las autoridades disponibles
   socket.on("obtener_autoridades", async (callback) => {
-    try {
-      // Obtener la conexión a la base de datos
-      const pool = await getConnection();
-
-      // Ejecutar la consulta para obtener las autoridades
-      const result = await pool.request().query("SELECT * FROM Autoridades");
-
-      const autoridades = result.recordset; // Extraer las autoridades de la respuesta
-
-      console.log("Autoridades obtenidas:", autoridades);
-      callback({ success: true, autoridades }); // Enviar las autoridades al cliente
-    } catch (err) {
-      console.error("Error al obtener autoridades:", err);
-      callback({ success: false, message: "Error al obtener autoridades" });
-    }
+      const  result = await getAutoridades();
+      callback(result);
   });
 
   // Evento para traer los tipos de productos
   socket.on("obtener_tipos_productos", async (callback) => {
-    try {
-      // Obtener la conexión a la base de datos
-      const pool = await getConnection();
-
-      // Ejecutar la consulta para obtener los tipos de productos
-      const result = await pool
-        .request()
-        .query("SELECT * FROM Tipos_Productos");
-
-      const tiposProductos = result.recordset; // Extraer los tipos de productos de la respuesta
-
-      console.log("Tipos de productos obtenidos:", tiposProductos);
-      callback({ success: true, tiposProductos }); // Enviar los tipos de productos al cliente
-    } catch (err) {
-      console.error("Error al obtener tipos de productos:", err);
-      callback({
-        success: false,
-        message: "Error al obtener tipos de productos",
-      });
-    }
+      const result = getTiposProductos();
+      callback(result);
   });
 
   // Evento para generar un registro de patente
   socket.on("iniciar_registro", async (data, callback) => {
     try {
-      const { id_funcionario, id_proceso, id_caso, nombre_proceso } = data;
-
-      // Id combinado
-      const id_registro = id_proceso + "-" + id_caso;
-
-      if (!id_funcionario) {
-        return callback({
-          success: false,
-          message: "El id_funcionario es obligatorio",
-        });
+      // 1️⃣ Insertar/verificar el proceso
+      const procesoResult = await insertProceso({
+        id_proceso: data.id_proceso,
+        nombre_proceso: data.nombre_proceso,
+      });
+  
+      if (!procesoResult.success) {
+        return callback(procesoResult);
       }
-
-      const pool = await getConnection();
-
-      // 1️⃣ Insertar o verificar el proceso en la tabla "procesos"
-      await pool
-        .request()
-        .input("id_proceso", sql.BigInt, id_proceso) // ID del proceso
-        .input("nombre_proceso", sql.VarChar, nombre_proceso) // Nombre del proceso
-        .query(`
-          MERGE INTO Procesos AS target
-          USING (VALUES (@id_proceso, @nombre_proceso)) 
-          AS source (id, name)
-          ON target.id = source.id
-          WHEN NOT MATCHED THEN
-              INSERT (id, name, description)
-              VALUES (source.id, source.name, NULL); -- description puede ser NULL o un valor por defecto
-        `);
-
-      // 2️⃣ Insertar o verificar el registro en la tabla "Registros"
-      await pool
-        .request()
-        .input("id_funcionario", sql.Int, id_funcionario) // ID del funcionario
-        .input("id_registro", sql.VarChar, id_registro) // ID del caso
-        .input("id_proceso", sql.BigInt, id_proceso) // ID del proceso
-        .query(`
-          MERGE INTO Registros AS target
-          USING (VALUES (@id_funcionario, @id_registro, @id_proceso)) 
-          AS source (id_funcionario, id_registro, id_proceso)
-          ON target.id_registro = source.id_registro AND target.id_proceso = source.id_proceso
-          WHEN NOT MATCHED THEN
-              INSERT (id_funcionario, fecha_registro, fecha_finalizacion, estado, id_autoridad, estado_proceso, id_registro, id_proceso)
-              VALUES (source.id_funcionario, GETDATE(), NULL, 0.00, NULL, 'iniciado', source.id_registro, source.id_proceso);
-        `);
-
-      console.log("Registro creado o verificado correctamente");
-      callback({
-        success: true,
-        message: "Registro creado o verificado correctamente",
+  
+      // 2️⃣ Insertar/verificar el registro
+      const registroResult = await insertRegistro({
+        id_funcionario: data.id_funcionario,
+        id_proceso: data.id_proceso,
+        id_caso: data.id_caso,
       });
+  
+      callback(registroResult);
     } catch (err) {
-      console.error("Error al crear o verificar el registro:", err);
-      callback({
-        success: false,
-        message: "Error al crear o verificar el registro",
-      });
+      console.error("Error en el registro:", err);
+      callback({ success: false, message: "Error en el registro" });
     }
   });
+  
 
   // Evento para agregar productos a un registro de patente
   socket.on("agregar_producto_datos", async (data, callback) => {
-    try {
-      const { id_registro, jsonProductos, memorando } = data;
-      // Validar que todos los campos estén presentes
-      if (!id_registro || !jsonProductos || !memorando) {
-        return callback({
-          success: false,
-          message: "Todos los campos son obligatorios",
-        });
-      }
-      // Parsear el JSON de productos (datos extraídos del documento)
-      const datosDocumento = JSON.parse(jsonProductos);
-      // Crear el JSON que se enviará al procedimiento almacenado
-      const jsonData = JSON.stringify({
-        id_registro: id_registro, // Identificador del registro
-        productos: datosDocumento.productos, // Productos extraídos del documento
-        autoridad: {
-          nombre: datosDocumento.solicitante.nombre,
-          Rol: datosDocumento.solicitante.cargo,
-          facultad: "definir en el formato",
-        },
-        proyecto: {
-          nombre: datosDocumento.proyecto.titulo,
-          codigo: datosDocumento.proyecto.resolucion.numero,
-        },
-        memorando: memorando, // Número o identificador del memorando
-      });
-      const pool = await getConnection();
-      // Ejecutar el procedimiento almacenado
-      await pool
-        .request()
-        .input("json", sql.NVarChar, jsonData) // Pasar el JSON como parámetro
-        .query(`EXEC InsertarRegistroConDatos @json`);
-      console.log("Datos procesados correctamente");
-      callback({ success: true, message: "Datos procesados correctamente" });
-    } catch (err) {
-      console.error("Error al procesar los datos:", err);
-      callback({ success: false, message: "Error al procesar los datos" });
-    }
+    const result = await insertProductoDatos(data);
+    callback(result);
   });
 
   // Evento de procesamiento de doeumentos y extracción de datos de productos y autores para previsualización en el Front
@@ -322,7 +224,19 @@ module.exports = (io, socket) => {
       // Generar los documentos
       generarActaPP(jsonDataAPP, outputFileNameAPP);
       generarContrato(jsonDataCCDP, outputFileNameCCDP);
-
+      //Guardar referencia de los documentos generados en la base de datos
+      await saveDocument({
+        id_registro: id_registro,
+        codigo_almacenamiento: outputFileNameCCDP,
+        id_tipo_documento: process.env.TIPO_DOCUMENTO_CCDP,
+        codigo: "CCDP"+id_combinado,
+      });
+      await saveDocument({
+        id_registro: id_registro,
+        codigo_almacenamiento: outputFileNameAPP,
+        id_tipo_documento: process.env.TIPO_DOCUMENTO_APP,
+        codigo: "APP"+id_combinado,
+      });
       // Enviar respuesta de éxito al cliente
       callback({
         success: true,
