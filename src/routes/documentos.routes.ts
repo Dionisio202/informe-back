@@ -63,7 +63,7 @@ router.post("/save-document", async (req, res) => {
           console.log("✅ Documento guardado correctamente:", filePath);
           // Guardar la información en SQL Server
           try {
-            let pool = await sql.connect(getConnection());
+            const pool = await getConnection();
             let result = await pool
               .request()
               .input("id_registro_per", sql.VarChar(50), id_registro_per)
