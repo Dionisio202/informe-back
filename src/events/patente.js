@@ -33,7 +33,7 @@ module.exports = (io, socket) => {
       const pool = await getConnection();
 
       // Ejecutar la consulta para obtener los tipos de productos
-      const result = await pool.request().query("SELECT * FROM TiposProductos");
+      const result = await pool.request().query("SELECT * FROM Tipos_Productos");
 
       const tiposProductos = result.recordset; // Extraer los tipos de productos de la respuesta
 
