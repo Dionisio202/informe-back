@@ -33,8 +33,6 @@ function angularParser(tag) {
 
 function generarContrato(jsonData, outputFileName) {
   try {
-    console.log("Generando documento...");
-    console.log("Datos:", jsonData);
 
     // Preparar los datos para el template
     const data = {
@@ -47,10 +45,7 @@ function generarContrato(jsonData, outputFileName) {
     console.log("Datos preparados:", data);
 
     // Cargar la plantilla del documento
-    const plantilla = fs.readFileSync(
-      "src/documents/CCDP.docx",
-      "binary"
-    );
+    const plantilla = fs.readFileSync("src/documents/CCDP.docx", "binary");
     const zip = new PizZip(plantilla);
 
     // Configurar Docxtemplater
@@ -83,29 +78,3 @@ function generarContrato(jsonData, outputFileName) {
 }
 
 module.exports = generarContrato;
-
-// Ejemplo de uso
-const jsonData = {
-  nombre_obra: "Desarrollo de un sistema de gestión de inventarios para PYMEs",
-  fecha: {
-    dia: 15,
-    mes: "octubre",
-    anio: 2023,
-  },
-  autores: [
-    { nombre: "Juan Pérez", cedula: "1234567890" },
-    { nombre: "María Gómez", cedula: "0987654321" },
-  ],
-  rector: {
-    nombre: "Dr. Luis Morales",
-    cedula: "1234567890",
-  },
-  codigo_memorando_inicial: "MEM-123-2023",
-  autoridad: "Dr. Luis Morales",
-  tipo_registro: "cesión de derechos patrimoniales",
-  proyecto_nombre: "Proyecto de Investigación XYZ",
-  proyecto_codigo: "UTA-12345",
-};
-
-// Generar el contrato
-generarContrato(jsonData, "Contrato_Cesion_Derechos_1.docx");

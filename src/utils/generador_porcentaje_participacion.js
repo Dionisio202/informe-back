@@ -40,26 +40,10 @@ function generarActaPP(jsonData, outputFileName) {
         ...autor,
         index: index + 1, // Añadir el índice para usarlo en la plantilla
       })),
-      autores_firma: jsonData.autores.reduce((acc, autor, index) => {
-        // Agrupar autores en pares para las firmas
-        if (index % 2 === 0) {
-          acc.push({
-            nombre1: autor.nombre,
-            cedula1: autor.cedula,
-            nombre2: jsonData.autores[index + 1]?.nombre || "", // Usar el siguiente autor o vacío si no existe
-            cedula2: jsonData.autores[index + 1]?.cedula || "", // Usar el siguiente autor o vacío si no existe
-          });
-        }
-        return acc;
-      }, []),
     };
-    console.log("Datos preparados:", data);
 
     // Cargar la plantilla del documento
-    const plantilla = fs.readFileSync(
-      "src/documents/APP.docx",
-      "binary"
-    );
+    const plantilla = fs.readFileSync("src/documents/APP.docx", "binary");
     const zip = new PizZip(plantilla);
 
     // Configurar Docxtemplater
@@ -92,46 +76,3 @@ function generarActaPP(jsonData, outputFileName) {
 }
 
 module.exports = generarActaPP;
-
-// Ejemplo de uso
-const jsonData = {
-  nombre_obra: "Desarrollo de un sistema de gestión de inventarios para PYMEs",
-  fecha: {
-    dia: 15,
-    mes: "octubre",
-    anio: 2023,
-  },
-  autores: [
-    {
-      nombre: "Juan Pérez",
-      cedula: "1234567890",
-      ciudad: "Ambato",
-      direccion: "Av. Los Shyris y Naciones Unidas",
-      participacion: 50,
-    },
-    {
-      nombre: "María Gómez",
-      cedula: "0987654321",
-      ciudad: "Ambato",
-      direccion: "Calle 10 de Agosto y Bolívar",
-      participacion: 50,
-    },
-    {
-      nombre: "Carlos López",
-      cedula: "1122334455",
-      ciudad: "Ambato",
-      direccion: "Av. Amazonas y Atahualpa",
-      participacion: 30,
-    },
-    {
-      nombre: "Ana Torres",
-      cedula: "5566778899",
-      ciudad: "Ambato",
-      direccion: "Calle 12 de Octubre y Sucre",
-      participacion: 20,
-    },
-  ],
-};
-
-// Generar el contrato
-generarActaPP(jsonData, "Acta_Participacion_Obra.docx");

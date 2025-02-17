@@ -1,63 +1,38 @@
-const fs = require("fs");
 const io = require("socket.io-client");
 
-class DocumentoTester {
-  constructor(socketUrl) {
-    this.socket = io(socketUrl);
-  }
+// URL del servidor donde está corriendo el socket
+const socket = io("http://localhost:3001"); // Cambia la URL según tu entorno
 
-  // Método para convertir un archivo a base64
-  static convertirArchivoABase64(rutaArchivo) {
-    try {
-      const archivo = fs.readFileSync(rutaArchivo);
-      return archivo.toString("base64");
-    } catch (error) {
-      console.error("Error al leer el archivo:", error);
-      return null;
-    }
-  }
+// Datos que se enviarán al servidor
+const data = {
+  id_registro: 3,  // Cambia este valor por el ID de tarea que deseas probar
+  id_tarea: 1,      // Cambia este valor por el ID de tarea que deseas probar
+};
 
-  // Método para probar el evento procesar_documentos
-  probarProcesamiento(rutaAutores, rutaProductos) {
-    const documentoAutores = DocumentoTester.convertirArchivoABase64(rutaAutores);
-    const documentoProductos = DocumentoTester.convertirArchivoABase64(rutaProductos);
+// Conectar al servidor
+socket.on("connect", () => {
+  console.log("Conectado al servidor de sockets");
 
-    if (!documentoAutores || !documentoProductos) {
-      console.error("❌ Error: No se pudieron leer los archivos.");
-      return;
+  // Emitir el evento "generar_documentos"
+  socket.emit("generar_documentos", data, (response) => {
+    // Manejar la respuesta del servidor
+    if (response.success) {
+      console.log("Respuesta del servidor:", response.message);
+    } else {
+      console.error("Error en el servidor:", response.message);
     }
 
-    this.socket.emit("procesar_documentos", 
-      { 
-        documento_autores: documentoAutores, 
-        documento_productos: documentoProductos 
-      }, 
-      (respuesta) => {
-        console.log("📢 Respuesta del servidor:", respuesta);
+    // Desconectar después de recibir la respuesta
+    socket.disconnect();
+  });
+});
 
-        // ✅ Verificar si la respuesta es exitosa
-        if (respuesta.success) {
-          try {
-            // 📌 Convertir JSON strings a objetos
-            const autores = JSON.parse(respuesta.autores);
-            const productos = JSON.parse(respuesta.productos);
-            console.log("Productos:", productos);
-          } catch (error) {
-            console.error("❌ Error al parsear la respuesta:", error);
-          }
-        } else {
-          console.error("❌ Error en la respuesta del servidor:", respuesta.message);
-        }
-      }
-    );
-  }
-}
+// Manejar errores de conexión
+socket.on("connect_error", (err) => {
+  console.error("Error al conectar al servidor:", err.message);
+});
 
-// 📌 Uso de la clase
-const tester = new DocumentoTester("http://localhost:3001");  // Cambia la URL si es necesario
-
-// 📂 Rutas de los documentos
-const rutaAutores = "./src/documents/autores.pdf";  // Cambia con tu archivo real
-const rutaProductos = "./src/documents/FORMATO_SOLICITUD_REGISTRO_EJ3.pdf";  // Cambia con tu archivo real
-
-tester.probarProcesamiento(rutaAutores, rutaProductos);
+// Manejar desconexión
+socket.on("disconnect", () => {
+  console.log("Desconectado del servidor");
+});

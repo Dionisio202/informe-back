@@ -1,7 +1,7 @@
 const { getConnection, sql } = require("../config/Conecction_SQL_Server");
 const { procesarArchivoAutores } = require("../utils/obtener_datos_autores"); // Importar la función para procesar documentos
 const { procesarArchivoProducto } = require("../utils/obtener_datos_producto"); // Importar la función para procesar documentos
-const { generarContrato} = require("../utils/generador_contrato_cesion_derechos"); // Importar la función para generar documentos
+const generarContrato = require("../utils/generador_contrato_cesion_derechos"); // Importar la función para generar documentos
 const generarActaPP = require("../utils/generador_porcentaje_participacion"); // Importar la función para generar documentos
 
 module.exports = (io, socket) => {
@@ -33,7 +33,9 @@ module.exports = (io, socket) => {
       const pool = await getConnection();
 
       // Ejecutar la consulta para obtener los tipos de productos
-      const result = await pool.request().query("SELECT * FROM Tipos_Productos");
+      const result = await pool
+        .request()
+        .query("SELECT * FROM Tipos_Productos");
 
       const tiposProductos = result.recordset; // Extraer los tipos de productos de la respuesta
 
@@ -271,41 +273,72 @@ module.exports = (io, socket) => {
     }
   });
 
-// Generacion de documentos
-socket.on("generar_documentos", async (data, callback) => {
-  try {
-    const { id_registro, id_tarea } = data; // Extraer los datos del objeto data
-    //id combinado
-    const id_combinado = id_registro + "-" + id_tarea;
-    // Nombre del archivo de salida
-    const outputFileNameCCDP = `Contrato_Cesion_Derechos_${id_combinado}.docx`;
-    const outputFileNameAPP = `Acta_Porcentaje_Participacion_${id_combinado}.docx`;
-    //Obtener Datos de la base de datos
-    const pool = await getConnection();
-    const result = await pool
-      .request()
-      .input("id_registro", sql.Int, id_registro)
-      .input("id_tarea", sql.BigInt, id_tarea)
-      .query(`
-        SELECT jsonData
-        FROM Tareas_Instancia
-        WHERE id_registro = @id_registro AND id_tarea = @id_tarea
-      `);
-    // Lógica para generar el documento
-    generarContrato(jsonData, outputFileName);
+  // Generacion de documentos
+  socket.on("generar_documentos", async (data, callback) => {
+    try {
+      const { id_registro, id_tarea } = data; // Extraer los datos del objeto data
 
-    // Enviar respuesta de éxito al cliente
-    callback({
-      success: true,
-      message: "Documento generado correctamente",
-    });
-  } catch (err) {
-    console.error("Error al generar el documento:", err);
-    callback({
-      success: false,
-      message: "Error al generar el documento",
-    });
-  }
-});
+      // ID combinado
+      const id_combinado = `${id_registro}-${id_tarea}`;
 
+      // Nombres de los archivos de salida
+      const outputFileNameCCDP = `Contrato_Cesion_Derechos_${id_combinado}.docx`;
+      const outputFileNameAPP = `Acta_Porcentaje_Participacion_${id_combinado}.docx`;
+
+      // Obtener Datos de la base de datos
+      const pool = await getConnection();
+      const result_APP = await pool
+        .request()
+        .input("id_registro", sql.Int, id_registro)
+        .query(`EXEC ObtenerDatosProducto @id_registro = @id_registro;`);
+
+      const result_CCDP = await pool
+        .request()
+        .input("id_registro", sql.Int, id_registro)
+        .query(`EXEC GenerarJSONParaRegistro @id_registro = @id_registro;`);
+
+      // Si la consulta no devuelve resultados
+      if (
+        !result_APP.recordset ||
+        result_APP.recordset.length === 0 ||
+        !result_CCDP.recordset ||
+        result_CCDP.recordset.length === 0
+      ) {
+        throw new Error(
+          "No se encontraron datos para el id_registro proporcionado."
+        );
+      }
+
+      // Convertir la respuesta JSON de SQL Server en un objeto JavaScript
+      let jsonDataAPP = JSON.parse(result_APP.recordset[0].ResultadoJSON);
+      let jsonDataCCDP = JSON.parse(result_CCDP.recordset[0].ResultadoJSON);
+      // 🛠️ Reparar la propiedades (convertir string a objeto)
+      //Fechas
+      jsonDataAPP.fecha = JSON.parse(jsonDataAPP.fecha);
+      jsonDataCCDP.fecha = JSON.parse(jsonDataCCDP.fecha);
+      //Rector
+      jsonDataCCDP.rector = JSON.parse(jsonDataCCDP.rector);
+
+      // Generar los documentos
+      generarActaPP(jsonDataAPP, outputFileNameAPP);
+      generarContrato(jsonDataCCDP, outputFileNameCCDP);
+
+      // Enviar respuesta de éxito al cliente
+      callback({
+        success: true,
+        message: "Documento generado correctamente",
+        documentNames: {
+          CCDP: outputFileNameCCDP,
+          APP: outputFileNameAPP,
+        },
+      });
+    } catch (err) {
+      console.error("❌ Error al generar el documento:", err.message);
+      callback({
+        success: false,
+        message: "Error al generar el documento",
+        error: err.message, // Envía detalles del error para depuración
+      });
+    }
+  });
 };
