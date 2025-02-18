@@ -196,3 +196,35 @@ export const saveDocument = async (
     return { success: false, message: "Error al guardar los datos en la BD" };
   }
 };
+
+export const updateDocument = async (
+  documento: Documento
+): Promise<{ success: boolean; message: string }> => {
+  const {
+    codigo_documento,
+    codigo_almacenamiento,
+  } = documento;
+
+  try {
+    const pool = await getConnection();
+
+    await pool
+      .request()
+      .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
+      .input("codigo_documento", sql.VarChar(100), codigo_documento)
+      .query(`
+          UPDATE Documentos
+          SET 
+            codigo_documento = @codigo_documento
+          WHERE codigo_almacenamiento = @codigo_almacenamiento
+        `);
+    console.log("✅ Documento actualizado en la base de datos");
+    return {
+      success: true,
+      message: "Documento actualizado correctamente en la BD",
+    };
+  } catch (dbError) {
+    console.error(dbError);
+    return { success: false, message: "Error al actualizar el documento en la BD" };
+  }
+};

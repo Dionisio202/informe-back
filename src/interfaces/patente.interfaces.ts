@@ -16,10 +16,10 @@ export interface Registro {
   }
   
   export interface Documento {
-    id_documento: string;
-    id_registro: string;
-    id_tipo_documento: number;
-    codigo_almacenamiento: string;
-    codigo_documento: string;
-    id_docuemnto_per: string;
+    id_documento?: string;
+    id_registro?: string;
+    id_tipo_documento?: number;
+    codigo_almacenamiento?: string;
+    codigo_documento?: string;
+    id_docuemnto_per?: string;
   }
