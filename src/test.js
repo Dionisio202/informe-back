@@ -1,38 +1,35 @@
-const io = require("socket.io-client");
+import { io } from "socket.io-client";
 
-// URL del servidor donde está corriendo el socket
-const socket = io("http://localhost:3001"); // Cambia la URL según tu entorno
+// URL del servidor donde se ejecuta tu socket
+const SERVER_URL = "http://localhost:3001"; // Reemplázalo por la URL de tu servidor
 
-// Datos que se enviarán al servidor
-const data = {
-  id_registro: 3,  // Cambia este valor por el ID de tarea que deseas probar
-  id_tarea: 1,      // Cambia este valor por el ID de tarea que deseas probar
-};
+// Conexión con el servidor de WebSocket
+const socket = io(SERVER_URL, {
+  reconnectionAttempts: 5, // Intentos de reconexión
+  timeout: 5000, // Tiempo de espera antes de considerar un error
+});
 
-// Conectar al servidor
 socket.on("connect", () => {
-  console.log("Conectado al servidor de sockets");
+  console.log("✅ Conectado al servidor WebSocket");
 
-  // Emitir el evento "generar_documentos"
-  socket.emit("generar_documentos", data, (response) => {
-    // Manejar la respuesta del servidor
-    if (response.success) {
-      console.log("Respuesta del servidor:", response.message);
-    } else {
-      console.error("Error en el servidor:", response.message);
+  // Enviar una petición al evento 'obtener_codigo_almacenamiento'
+  socket.emit(
+    "obtener_codigo_almacenamiento",
+    {
+      id_registro: "3", // Reemplázalo con un ID real
+      id_tipo_documento: 2, // Tipo de documento que deseas probar
+    },
+    (response) => {
+      console.log("📌 Respuesta del servidor:", response);
+      socket.disconnect(); // Cerrar la conexión después de recibir la respuesta
     }
-
-    // Desconectar después de recibir la respuesta
-    socket.disconnect();
-  });
+  );
 });
 
-// Manejar errores de conexión
-socket.on("connect_error", (err) => {
-  console.error("Error al conectar al servidor:", err.message);
-});
-
-// Manejar desconexión
 socket.on("disconnect", () => {
-  console.log("Desconectado del servidor");
+  console.log("❌ Desconectado del servidor WebSocket");
+});
+
+socket.on("connect_error", (err) => {
+  console.error("⚠️ Error de conexión:", err.message);
 });

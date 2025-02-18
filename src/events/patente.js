@@ -3,7 +3,13 @@ const { procesarArchivoAutores } = require("../utils/obtener_datos_autores"); //
 const { procesarArchivoProducto } = require("../utils/obtener_datos_producto"); // Importar la función para procesar documentos
 const generarContrato = require("../utils/generador_contrato_cesion_derechos"); // Importar la función para generar documentos
 const generarActaPP = require("../utils/generador_porcentaje_participacion"); // Importar la función para generar documentos
-const { getAutoridades, getTiposProductos, insertProceso, insertRegistro, saveDocument} = require("../services/patente.service");
+const {
+  getAutoridades,
+  getTiposProductos,
+  insertProceso,
+  insertRegistro,
+  saveDocument,
+} = require("../services/patente.service");
 // Variables de entorno
 require("dotenv").config();
 
@@ -12,14 +18,14 @@ module.exports = (io, socket) => {
 
   // Evento para obtener las autoridades disponibles
   socket.on("obtener_autoridades", async (callback) => {
-      const  result = await getAutoridades();
-      callback(result);
+    const result = await getAutoridades();
+    callback(result);
   });
 
   // Evento para traer los tipos de productos
   socket.on("obtener_tipos_productos", async (callback) => {
-      const result = await getTiposProductos();
-      callback(result);
+    const result = await getTiposProductos();
+    callback(result);
   });
 
   // Evento para generar un registro de patente
@@ -30,25 +36,24 @@ module.exports = (io, socket) => {
         id_proceso: data.id_proceso,
         nombre_proceso: data.nombre_proceso,
       });
-  
+
       if (!procesoResult.success) {
         return callback(procesoResult);
       }
-  
+
       // 2️⃣ Insertar/verificar el registro
       const registroResult = await insertRegistro({
         id_funcionario: data.id_funcionario,
         id_proceso: data.id_proceso,
         id_caso: data.id_caso,
       });
-  
+
       callback(registroResult);
     } catch (err) {
       console.error("Error en el registro:", err);
       callback({ success: false, message: "Error en el registro" });
     }
   });
-  
 
   // Evento para agregar productos a un registro de patente
   socket.on("agregar_producto_datos", async (data, callback) => {
@@ -74,7 +79,7 @@ module.exports = (io, socket) => {
       // Convertir el array de personas a formato JSON para enviarlo al Front
       const jsonAutores = JSON.stringify(autores);
       const jsonProductos = JSON.stringify(productos);
-      
+
       callback({
         success: true,
         message: "Datos procesados correctamente",
@@ -172,6 +177,90 @@ module.exports = (io, socket) => {
     }
   });
 
+  // Evento para traer los estados temporales de los formularios guardados segun el id_registro y id_tarea
+  socket.on("obtener_estado_temporal", async (data, callback) => {
+    try {
+      const { id_registro, id_tarea } = data; // Extraer los datos del objeto data
+
+      //id combinado
+      const id_combinado = id_registro + "-" + id_tarea;
+
+      // Obtener la conexión a la base de datos
+      const pool = await getConnection();
+
+      // Obtener el estado temporal del formulario
+      const result = await pool
+        .request()
+        .input("id_registro", sql.VarChar, id_registro)
+        .input("id_tarea", sql.VarChar, id_combinado).query(`
+          SELECT jsonData
+          FROM Tareas_Instancia
+          WHERE id_registro = @id_registro AND id_tareas = @id_tarea;
+        `);
+
+      // Si la consulta no devuelve resultados
+      if (!result.recordset || result.recordset.length === 0) {
+        throw new Error(
+          "No se encontraron datos para el id_registro proporcionado."
+        );
+      }
+
+      // Enviar respuesta con los datos encontrados
+      callback({
+        success: true,
+        message: "Datos encontrados correctamente",
+        jsonData: result.recordset[0].jsonData,
+      });
+    } catch (err) {
+      console.error("Error al obtener el estado temporal:", err);
+      callback({
+        success: false,
+        message: "Error al obtener el estado temporal",
+      });
+    }
+  });
+
+  // Evento para traer el codigo de un documento del evento anterior
+  socket.on("obtener_codigo_almacenamiento", async (data, callback) => {
+    try {
+      const { id_registro, id_tipo_documento } = data; 
+      const pool = await getConnection();
+  
+      // Obtener el último documento insertado
+      const result = await pool
+        .request()
+        .input("id_registro_per", sql.VarChar, id_registro)
+        .input("id_tipo_documento", sql.Int, id_tipo_documento)
+        .query(`
+          SELECT TOP 1 * 
+          FROM Documentos 
+          WHERE id_registro_per = @id_registro_per
+          AND id_tipo_documento = @id_tipo_documento
+          ORDER BY id_documento DESC;
+        `);
+  
+      if (result.recordset.length === 0) {
+        return callback({
+          success: false,
+          message: "No se encontraron documentos",
+        });
+      }
+  
+      callback({
+        success: true,
+        message: "Documento encontrado correctamente",
+        jsonData: result.recordset[0].codigo_almacenamiento, // Devuelve el documento completo
+      });
+    } catch (err) {
+      console.error("Error al obtener el código de almacenamiento:", err);
+      callback({
+        success: false,
+        message: "Error al obtener el estado temporal",
+      });
+    }
+  });
+  
+
   // Generacion de documentos
   socket.on("generar_documentos", async (data, callback) => {
     try {
@@ -226,13 +315,13 @@ module.exports = (io, socket) => {
         id_registro: id_registro,
         codigo_almacenamiento: outputFileNameCCDP,
         id_tipo_documento: process.env.TIPO_DOCUMENTO_CCDP,
-        codigo_documento: "CCDP"+id_combinado,
+        codigo_documento: "CCDP-" + id_combinado,
       });
       await saveDocument({
         id_registro: id_registro,
         codigo_almacenamiento: outputFileNameAPP,
         id_tipo_documento: process.env.TIPO_DOCUMENTO_APP,
-        codigo_documento: "APP"+id_combinado,
+        codigo_documento: "APP-" + id_combinado,
       });
       // Enviar respuesta de éxito al cliente
       callback({
