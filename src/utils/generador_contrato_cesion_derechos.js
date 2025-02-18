@@ -42,7 +42,6 @@ function generarContrato(jsonData, outputFileName) {
         index: index + 1, // Añadir el índice para usarlo en la plantilla
       })),
     };
-    console.log("Datos preparados:", data);
 
     // Cargar la plantilla del documento
     const plantilla = fs.readFileSync("src/documents/CCDP.docx", "binary");

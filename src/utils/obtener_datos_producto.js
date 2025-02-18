@@ -15,11 +15,7 @@ async function procesarPdf(filePath) {
   try {
     const data = fs.readFileSync(filePath);
     const pdfData = await pdfParse(data);
-
-    let text = pdfData.text;
-    console.log(text);
-    text = normalizarTextoPDF(pdfData.text);
-    console.log(text);
+    let text = normalizarTextoPDF(pdfData.text);
     return text;
   } catch (error) {
     console.error("Error al procesar el PDF:", error);

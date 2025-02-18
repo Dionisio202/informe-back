@@ -18,7 +18,7 @@ module.exports = (io, socket) => {
 
   // Evento para traer los tipos de productos
   socket.on("obtener_tipos_productos", async (callback) => {
-      const result = getTiposProductos();
+      const result = await getTiposProductos();
       callback(result);
   });
 
@@ -74,9 +74,7 @@ module.exports = (io, socket) => {
       // Convertir el array de personas a formato JSON para enviarlo al Front
       const jsonAutores = JSON.stringify(autores);
       const jsonProductos = JSON.stringify(productos);
-      console.log("Autores procesados:", jsonAutores);
-      console.log("Productos procesados:", jsonProductos);
-
+      
       callback({
         success: true,
         message: "Datos procesados correctamente",
@@ -106,7 +104,6 @@ module.exports = (io, socket) => {
 
       // Convertir el array de personas a formato JSON para enviarlo a SQL Server
       const jsonAutores = JSON.stringify(json);
-      console.log("Autores procesados:", jsonAutores);
       // Obtener la conexión a la base de datos
       const pool = await getConnection();
 
@@ -145,17 +142,17 @@ module.exports = (io, socket) => {
       // Usar MERGE para hacer un "upsert" (insertar o actualizar)
       await pool
         .request()
-        .input("id_registro", sql.Int, id_registro)
+        .input("id_registro", sql.VarChar, id_registro)
         .input("id_funcionario", sql.Int, id_funcionario)
-        .input("id_tarea", sql.BigInt, id_combinado)
+        .input("id_tarea", sql.VarChar, id_combinado)
         .input("jsonData", sql.VarChar, jsonData).query(`
           MERGE INTO Tareas_Instancia AS target
           USING (VALUES (@id_registro, @id_tarea, @jsonData, @id_funcionario)) AS source (id_registro, id_tarea, jsonData,id_funcionario)
-          ON target.id_registro = source.id_registro AND target.id_tarea = source.id_tarea
+          ON target.id_registro = source.id_registro AND target.id_tareas = source.id_tarea
           WHEN MATCHED THEN
             UPDATE SET jsonData = source.jsonData
           WHEN NOT MATCHED THEN
-            INSERT (id_registro, id_tarea, jsonData, id_funcionario)
+            INSERT (id_registro, id_tareas, jsonData, id_funcionario)
             VALUES (source.id_registro, source.id_tarea, source.jsonData, source.id_funcionario);
         `);
 
