@@ -2,7 +2,9 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import http from "http";
+import { saveDocument } from "../services/patente.service";
 const { getConnection, sql } = require("../config/Conecction_SQL_Server.js");
+
 const router = express.Router();
 
 //Ruta de prueba HTTP
@@ -18,7 +20,7 @@ router.get("/document", (req: any, res: any) => {
     return res.status(400).send("Debe proporcionar un nombre de documento.");
   }
 
-  const filePath = path.join(__dirname, "../documents", nombre);
+  const filePath = path.join('/app/documents',nombre);
 
   if (fs.existsSync(filePath)) {
     res.setHeader("Content-Disposition", `attachment; filename="${nombre}"`);
@@ -30,72 +32,243 @@ router.get("/document", (req: any, res: any) => {
   }
 });
 
-// 📂 Ruta para guardar un documento
-router.post("/save-document", async (req, res) => {
-  console.log("📥 Datos recibidos en el callback:", req.body);
 
-  if (
-    !req.body ||
-    !req.body.url ||
-    !req.body.key ||
-    !req.body.id_registro_per ||
-    !req.body.codigo ||
-    !req.body.id_tipo_documento
-  ) {
-    console.error("❌ Datos inválidos recibidos:", req.body);
-    return res.status(400).json({ error: "Datos inválidos recibidos" });
+
+// Ruta para guardar un documento
+router.post('/save-document', (req:any, res:any) => {
+  console.log('📥 Datos recibidos en el callback-save:', req.body); // <-- Agrega esto
+
+  if (!req.body || !req.body.url || !req.body.key) {
+      console.error('❌ Datos inválidos recibidos:', req.body);
+      return res.status(400).json({ error: 'Datos inválidos recibidos' });
   }
 
-  const { id_registro_per, codigo } = req.body.key;
-  const { id_tipo_documento } = req.body;
-
-  // Definir la ruta del archivo
-  const filePath = path.join(__dirname, "documents", `${codigo}.docx`);
+  const filePath = path.join('/app/documents', `${req.body.key}.docx`);
   const file = fs.createWriteStream(filePath);
 
-  try {
-    // Descargar el archivo desde la URL
-    http
-      .get(req.body.url, (response) => {
-        response.pipe(file);
-        file.on("finish", async () => {
-          file.close();
-          console.log("✅ Documento guardado correctamente:", filePath);
-          // Guardar la información en SQL Server
-          try {
-            const pool = await getConnection();
-            let result = await pool
-              .request()
-              .input("id_registro_per", sql.VarChar(50), id_registro_per)
-              .input("codigo_almacenamiento", sql.VarChar(100), filePath)
-              .input("codigo_documento", sql.VarChar(100), codigo)
-              .input("id_tipo_documento", sql.Int, id_tipo_documento).query(`
-                            INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, codigo_documento, id_tipo_documento) 
-                            VALUES (@id_registro_per, @codigo_almacenamiento, @codigo_documento, @id_tipo_documento)
-                        `);
-
-            console.log("✅ Datos insertados en la base de datos");
-            res
-              .status(200)
-              .json({
-                message: "Documento guardado e información insertada en la BD",
-              });
-          } catch (dbError) {
-            console.error("❌ Error al insertar en la base de datos:", dbError);
-            res
-              .status(500)
-              .json({ error: "Error al guardar los datos en la BD" });
-          }
-        });
-      })
-      .on("error", (err) => {
-        console.error("❌ Error al descargar el documento:", err);
-        res.status(500).json({ error: "Error al guardar el documento" });
+  http.get(req.body.url, (response) => {
+      response.pipe(file);
+      file.on('finish', () => {
+          file.close(() => {
+              console.log('✅ Documento guardado correctamente:', filePath);
+              res.status(200).json({ message: 'Documento guardado correctamente' }); // 🔹 JSON en lugar de string
+          });
       });
-  } catch (err) {
-    console.error("❌ Error inesperado:", err);
-    res.status(500).json({ error: "Error inesperado en el servidor" });
+  }).on('error', (err) => {
+      console.error('❌ Error al descargar el documento:', err);
+      res.status(500).json({ error: 'Error al guardar el documento' }); // 🔹 JSON en lugar de string
+  });
+});
+
+
+router.get("/verificar-documento", async (req, res) => {
+  const { key, nombre, id_registro_per, id_tipo_documento } = req.query;
+
+  if (!key) {
+    return res.status(400).json({ error: "El parámetro 'key' es obligatorio" });
+  }
+  if (!nombre) {
+    return res.status(400).json({ error: "El parámetro 'nombre' es obligatorio" });
+  }
+
+  try {
+    let pool = await getConnection();
+    let checkResult = await pool
+      .request()
+      .input("codigo_almacenamiento", sql.VarChar(100), key)
+      .query("SELECT COUNT(*) AS count FROM Documentos WHERE codigo_almacenamiento = @codigo_almacenamiento");
+
+    const documentExists = checkResult.recordset[0].count > 0;
+    console.log("🔍 Documento encontrado en la BD:", documentExists);
+
+    if (!documentExists) {
+      // Validamos que se hayan enviado los parámetros necesarios para insertar el documento en la BD
+      if (!id_registro_per || !id_tipo_documento) {
+        return res.status(400).json({ error: "Los parámetros 'id_registro_per' y 'id_tipo_documento' son obligatorios para generar un nuevo documento." });
+      }
+
+      // Ruta del documento base (plantilla) y del nuevo documento a generar
+      const baseFilePath = path.join('/app/documents/templates', nombre);
+      const newFilePath = path.join('/app/documents', `${key}.docx`);
+
+      // Verifica que el documento base exista
+      if (!fs.existsSync(baseFilePath)) {
+        return res.status(404).json({ error: "El documento base no se encontró", baseFile: baseFilePath });
+      }
+
+      // Copia el documento base para generar el nuevo documento
+      await fs.promises.copyFile(baseFilePath, newFilePath);
+
+      // Insertamos el registro en la base de datos, tal como se realiza en el endpoint POST
+      await pool.request()
+        .input("id_registro_per", sql.VarChar(50), id_registro_per)
+        .input("codigo_almacenamiento", sql.VarChar(100), key)
+        .input("id_tipo_documento", sql.Int, id_tipo_documento)
+        .query(`
+          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento) 
+          VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento)
+        `);
+
+      return res.status(201).json({ 
+        message: "Documento no encontrado. Se ha generado un nuevo documento basado en la plantilla y se ha almacenado en la BD.",
+        filePath: newFilePath
+      });
+    }
+
+    res.status(200).json({ exists: documentExists });
+  } catch (error:any) {
+    console.error("❌ Error en la BD:", error.message, error.stack);
+    res.status(500).json({ error: "Error al verificar el documento en la BD", details: error.message });
   }
 });
 
+router.get("/verificar-documento", async (req, res) => {
+  const { key, nombre, id_registro_per, id_tipo_documento } = req.query;
+
+  if (!key) {
+    return res.status(400).json({ error: "El parámetro 'key' es obligatorio" });
+  }
+  if (!nombre) {
+    return res.status(400).json({ error: "El parámetro 'nombre' es obligatorio" });
+  }
+
+  try {
+    let pool = await getConnection();
+    let checkResult = await pool
+      .request()
+      .input("codigo_almacenamiento", sql.VarChar(100), key)
+      .query("SELECT COUNT(*) AS count FROM Documentos WHERE codigo_almacenamiento = @codigo_almacenamiento");
+
+    const documentExists = checkResult.recordset[0].count > 0;
+    console.log("🔍 Documento encontrado en la BD:", documentExists);
+
+    if (!documentExists) {
+      // Validamos que se hayan enviado los parámetros necesarios para insertar el documento en la BD
+      if (!id_registro_per || !id_tipo_documento) {
+        return res.status(400).json({ error: "Los parámetros 'id_registro_per' y 'id_tipo_documento' son obligatorios para generar un nuevo documento." });
+      }
+
+      // Ruta del documento base (plantilla) y del nuevo documento a generar
+      const baseFilePath = path.join('/app/documents/templates', nombre);
+      const newFilePath = path.join('/app/documents', `${key}.docx`);
+
+      // Verifica que el documento base exista
+      if (!fs.existsSync(baseFilePath)) {
+        return res.status(404).json({ error: "El documento base no se encontró", baseFile: baseFilePath });
+      }
+
+      // Copia el documento base para generar el nuevo documento
+      await fs.promises.copyFile(baseFilePath, newFilePath);
+
+      // Insertamos el registro en la base de datos, tal como se realiza en el endpoint POST
+      await pool.request()
+        .input("id_registro_per", sql.VarChar(50), id_registro_per)
+        .input("codigo_almacenamiento", sql.VarChar(100), key)
+        .input("id_tipo_documento", sql.Int, id_tipo_documento)
+        .query(`
+          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento) 
+          VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento)
+        `);
+
+      return res.status(201).json({ 
+        message: "Documento no encontrado. Se ha generado un nuevo documento basado en la plantilla y se ha almacenado en la BD.",
+        filePath: newFilePath
+      });
+    }
+
+    res.status(200).json({ exists: documentExists });
+  } catch (error:any) {
+    console.error("❌ Error en la BD:", error.message, error.stack);
+    res.status(500).json({ error: "Error al verificar el documento en la BD", details: error.message });
+  }
+});
+
+
+////guardar un documento 
+
+router.post("/get-document", async (req, res) => {
+  const { nombre, id_registro_per, id_tipo_documento, document ,memorando} = req.body;
+
+
+  if (!nombre) {
+    return res.status(400).json({ error: "El parámetro 'nombre' es obligatorio" });
+  }
+  if (!id_registro_per) {
+    return res.status(400).json({ error: "El parametro id_regsitro es obligatorio" });
+  }
+  if (!document) {
+    return res.status(400).json({ error: "El parámetro 'document' es obligatorio" });
+  }
+
+  try {
+    let pool = await getConnection();
+    let checkResult = await pool
+      .request()
+      .input("codigo_almacenamiento", sql.VarChar(100), nombre)
+      .query("SELECT COUNT(*) AS count FROM Documentos WHERE codigo_almacenamiento = @codigo_almacenamiento");
+
+    const documentExists = checkResult.recordset[0].count > 0;
+    console.log("🔍 Documento encontrado en la BD:", documentExists);
+
+    if (!documentExists) {
+      // Validamos que se hayan enviado los parámetros necesarios para insertar el documento en la BD
+      if (!id_registro_per || !id_tipo_documento) {
+        return res.status(400).json({ error: "Los parámetros 'id_registro_per' y 'id_tipo_documento' son obligatorios para generar un nuevo documento." });
+      }
+
+      // Decodificar el documento recibido (se asume que viene en base64)
+      const documentBuffer = Buffer.from(document, 'base64');
+
+      // Construir el nuevo nombre del archivo combinando el nombre original y la key
+      const newFileName = `${nombre}.pdf`;
+      const newFilePath = path.join('/app/documents', newFileName);
+
+      // Guardar el documento recibido en el sistema de archivos
+      await fs.promises.writeFile(newFilePath, documentBuffer);
+
+      // Insertar el registro en la base de datos
+      await pool.request()
+        .input("id_registro_per", sql.VarChar(50), id_registro_per)
+        .input("codigo_almacenamiento", sql.VarChar(100),nombre)
+        .input("id_tipo_documento", sql.Int, id_tipo_documento)
+        .input("codigo_documento", sql.VarChar(100), memorando)
+        .query(`
+          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento,codigo_documento) 
+          VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento,@codigo_documento)
+        `);
+
+      return res.status(201).json({ 
+        message: "Documento no encontrado. Se ha recibido y almacenado un nuevo documento.",
+        filePath: newFilePath
+      });
+    }
+
+    res.status(200).json({ exists: documentExists });
+  } catch (error:any) {
+    console.error("❌ Error en la BD:", error.message, error.stack);
+    res.status(500).json({ error: "Error al verificar el documento en la BD", details: error.message });
+  }
+});
+
+
+router.get("/save-memorando", async (req, res) => {
+  const { key, id_tipo_documento ,id_registro} = req.query;
+
+  if (!key) {
+    return res.status(400).json({ error: "El parámetro 'key' es obligatorio" });
+  }
+  if (!id_tipo_documento) {
+    return res.status(400).json({ error: "El parámetro 'id_tipo_documento' es obligatorio" });
+  }
+  await saveDocument({
+    id_registro: id_registro,
+    id_tipo_documento: id_tipo_documento,
+    codigo_documento: key,
+    id_documento: "",
+    codigo_almacenamiento: "",
+    id_docuemnto_per: ""
+  });
+
+  });
 export default router;
+

@@ -42,9 +42,10 @@ function generarContrato(jsonData, outputFileName) {
         index: index + 1, // Añadir el índice para usarlo en la plantilla
       })),
     };
+    console.log("Datos preparados:", data);
 
     // Cargar la plantilla del documento
-    const plantilla = fs.readFileSync("src/documents/CCDP.docx", "binary");
+    const plantilla = fs.readFileSync("/app/documents/templates/CCDP.docx", "binary");
     const zip = new PizZip(plantilla);
 
     // Configurar Docxtemplater
@@ -59,7 +60,7 @@ function generarContrato(jsonData, outputFileName) {
 
     // Guardar el documento generado
     const buffer = doc.getZip().generate({ type: "nodebuffer" });
-    fs.writeFileSync("src/documents/temp/"+outputFileName, buffer);
+    fs.writeFileSync("/app/documents/"+outputFileName, buffer);
 
     console.log("Documento generado correctamente:", outputFileName);
   } catch (err) {

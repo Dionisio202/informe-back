@@ -43,7 +43,7 @@ function generarActaPP(jsonData, outputFileName) {
     };
 
     // Cargar la plantilla del documento
-    const plantilla = fs.readFileSync("src/documents/APP.docx", "binary");
+    const plantilla = fs.readFileSync("/app/documents/templates/APP.docx", "binary");
     const zip = new PizZip(plantilla);
 
     // Configurar Docxtemplater
@@ -58,7 +58,8 @@ function generarActaPP(jsonData, outputFileName) {
 
     // Guardar el documento generado
     const buffer = doc.getZip().generate({ type: "nodebuffer" });
-    fs.writeFileSync("src/documents/temp/",outputFileName, buffer);
+    fs.writeFileSync("/app/documents/"+outputFileName, buffer);
+
     console.log("Documento generado correctamente:", outputFileName);
   } catch (err) {
     // Guardar el error en un archivo de texto

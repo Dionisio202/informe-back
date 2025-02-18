@@ -1,4 +1,3 @@
-import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 const cors = require("cors");
@@ -9,6 +8,7 @@ const poaEvents = require('./events/poa');
 const emailEvents = require('./events/email');
 const patenteEvents = require('./events/patente');
 const form4Events = require('./events/form4');
+const express = require('express');
 
 // Importar Rutas
 import documentosRoutes from './routes/documentos.routes';
@@ -16,6 +16,8 @@ import documentosRoutes from './routes/documentos.routes';
 require('dotenv').config();
 
 const app = express();
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 const server = http.createServer(app);
 app.use(cors({
     origin: process.env.CORS_ORIGIN,
@@ -37,7 +39,7 @@ const PORT = 3001;
 app.use(morgan('dev'));
 
 // Ruta de prueba HTTP
-app.get('/', (req, res) => {
+app.get('/', (req:any, res:any) => {
     res.send('Hello World! websocket');
 });
 

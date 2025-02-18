@@ -277,12 +277,12 @@ module.exports = (io, socket) => {
       const pool = await getConnection();
       const result_APP = await pool
         .request()
-        .input("id_registro", sql.Int, id_registro)
+        .input("id_registro", sql.VarChar, id_registro)
         .query(`EXEC ObtenerDatosProducto @id_registro = @id_registro;`);
 
       const result_CCDP = await pool
         .request()
-        .input("id_registro", sql.Int, id_registro)
+        .input("id_registro", sql.VarChar, id_registro)
         .query(`EXEC GenerarJSONParaRegistro @id_registro = @id_registro;`);
 
       // Si la consulta no devuelve resultados
@@ -314,13 +314,13 @@ module.exports = (io, socket) => {
       await saveDocument({
         id_registro: id_registro,
         codigo_almacenamiento: outputFileNameCCDP,
-        id_tipo_documento: process.env.TIPO_DOCUMENTO_CCDP,
+        id_tipo_documento: "7",
         codigo_documento: "CCDP-" + id_combinado,
       });
       await saveDocument({
         id_registro: id_registro,
         codigo_almacenamiento: outputFileNameAPP,
-        id_tipo_documento: process.env.TIPO_DOCUMENTO_APP,
+        id_tipo_documento: "8",
         codigo_documento: "APP-" + id_combinado,
       });
       // Enviar respuesta de éxito al cliente
