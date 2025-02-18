@@ -2,7 +2,7 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import http from "http";
-import { saveDocument } from "../services/patente.service";
+import { saveDocument, updateDocument } from "../services/patente.service";
 const { getConnection, sql } = require("../config/Conecction_SQL_Server.js");
 
 const router = express.Router();
@@ -311,6 +311,17 @@ router.get("/save-memorando", async (req, res) => {
         message: "Error al obtener el estado temporal",
       });
     }
+  });
+
+  router.get("/update-document", async (req, res) => {
+    const { codigo_documento, codigo_almacenamiento } = req.query;
+    if (!codigo_almacenamiento) {
+      return res.status(400).json({ error: "El parámetro 'id_tipo_documento' es obligatorio" });
+    }
+    await updateDocument({
+      codigo_documento: codigo_documento,
+      codigo_almacenamiento: "",
+    });
   });
   
 export default router;
