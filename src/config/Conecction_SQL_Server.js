@@ -4,15 +4,17 @@ require('dotenv').config();
 
 
 // Configuración de la conexión a SQL Server
+// Modifica el archivo de configuración (Conecction_SQL_Server.js)
 const dbConfig = {
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  server: process.env.DB_SERVER,
-  database: process.env.DB_NAME,
-  port: parseInt(process.env.DB_PORT),
+  user: "sa",
+  password: "edison202",
+  server: "10.9.4.182",
+  database: "onlyoffice",
+  port: 1466, // Usa el puerto directamente
   options: {
     encrypt: true,
     trustServerCertificate: true,
+    // Remueve 'instanceName' si usas 'port'
   },
 };
 
@@ -45,10 +47,12 @@ async function getConnection() {
         .connect()
         .then(pool => {
           logger.info('Pool de conexión creado.');
+          console.log(dbConfig);
           return pool;
         })
         .catch(err => {
           logger.error('Error al crear el pool de conexión:', err);
+          console.log(dbConfig);
           poolPromise = null; // Reinicia el pool en caso de error
           throw new Error(`Error al conectar a SQL Server: ${err.message}`);
         });
@@ -79,3 +83,4 @@ module.exports = {
   closePool,
   sql,
 };
+
