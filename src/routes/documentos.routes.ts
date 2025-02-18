@@ -187,24 +187,26 @@ router.get("/verificar-documento", async (req, res) => {
 ////guardar un documento 
 
 router.post("/get-document", async (req, res) => {
-  const { nombre, id_registro_per, id_tipo_documento, document ,memorando} = req.body;
-
+  let { nombre, id_registro_per, id_tipo_documento, document, memorando } = req.body;
 
   if (!nombre) {
     return res.status(400).json({ error: "El parámetro 'nombre' es obligatorio" });
   }
   if (!id_registro_per) {
-    return res.status(400).json({ error: "El parametro id_regsitro es obligatorio" });
+    return res.status(400).json({ error: "El parámetro 'id_registro_per' es obligatorio" });
   }
   if (!document) {
     return res.status(400).json({ error: "El parámetro 'document' es obligatorio" });
   }
 
+  // Reemplazar espacios en blanco por guiones bajos
+  const nombreFormateado = nombre.replace(/\s+/g, "_");
+
   try {
     let pool = await getConnection();
     let checkResult = await pool
       .request()
-      .input("codigo_almacenamiento", sql.VarChar(100), nombre)
+      .input("codigo_almacenamiento", sql.VarChar(100), nombreFormateado)
       .query("SELECT COUNT(*) AS count FROM Documentos WHERE codigo_almacenamiento = @codigo_almacenamiento");
 
     const documentExists = checkResult.recordset[0].count > 0;
@@ -217,11 +219,11 @@ router.post("/get-document", async (req, res) => {
       }
 
       // Decodificar el documento recibido (se asume que viene en base64)
-      const documentBuffer = Buffer.from(document, 'base64');
+      const documentBuffer = Buffer.from(document, "base64");
 
-      // Construir el nuevo nombre del archivo combinando el nombre original y la key
-      const newFileName = `${nombre}.pdf`;
-      const newFilePath = path.join('/app/documents', newFileName);
+      // Construir el nuevo nombre del archivo combinando el nombre formateado y la extensión
+      const newFileName = `${nombreFormateado}.pdf`;
+      const newFilePath = path.join("/app/documents", newFileName);
 
       // Guardar el documento recibido en el sistema de archivos
       await fs.promises.writeFile(newFilePath, documentBuffer);
@@ -229,12 +231,12 @@ router.post("/get-document", async (req, res) => {
       // Insertar el registro en la base de datos
       await pool.request()
         .input("id_registro_per", sql.VarChar(50), id_registro_per)
-        .input("codigo_almacenamiento", sql.VarChar(100),nombre)
+        .input("codigo_almacenamiento", sql.VarChar(100), nombreFormateado)
         .input("id_tipo_documento", sql.Int, id_tipo_documento)
         .input("codigo_documento", sql.VarChar(100), memorando)
         .query(`
-          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento,codigo_documento) 
-          VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento,@codigo_documento)
+          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento, codigo_documento) 
+          VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento, @codigo_documento)
         `);
 
       return res.status(201).json({ 
@@ -249,6 +251,7 @@ router.post("/get-document", async (req, res) => {
     res.status(500).json({ error: "Error al verificar el documento en la BD", details: error.message });
   }
 });
+
 
 
 router.get("/save-memorando", async (req, res) => {
@@ -320,7 +323,7 @@ router.get("/save-memorando", async (req, res) => {
     }
     await updateDocument({
       codigo_documento: codigo_documento,
-      codigo_almacenamiento: "",
+      codigo_almacenamiento: codigo_almacenamiento,
     });
   });
   
