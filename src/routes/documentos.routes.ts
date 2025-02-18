@@ -270,5 +270,48 @@ router.get("/save-memorando", async (req, res) => {
   });
 
   });
+
+  // Ruta para obtener el codigo de documentos
+  router.get("/get-document-code", async (req, res) => {
+    try {
+      const { id_registro, id_tipo_documento } = req.query; // Usar req.query en GET
+      if (!id_registro || !id_tipo_documento) {
+        return res.status(400).json({ success: false, message: "Faltan parámetros" });
+      }
+  
+      const pool = await getConnection();
+      const result = await pool
+        .request()
+        .input("id_registro_per", sql.VarChar, id_registro)
+        .input("id_tipo_documento", sql.Int, id_tipo_documento)
+        .query(`
+          SELECT TOP 1 codigo_almacenamiento
+          FROM Documentos 
+          WHERE id_registro_per = @id_registro_per
+          AND id_tipo_documento = @id_tipo_documento
+          ORDER BY id_documento DESC;
+        `);
+  
+      if (result.recordset.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No se encontraron documentos",
+        });
+      }
+  
+      res.json({
+        success: true,
+        message: "Documento encontrado correctamente",
+        jsonData: result.recordset[0].codigo_almacenamiento,
+      });
+    } catch (err) {
+      console.error("Error al obtener el código de almacenamiento:", err);
+      res.status(500).json({
+        success: false,
+        message: "Error al obtener el estado temporal",
+      });
+    }
+  });
+  
 export default router;
 
