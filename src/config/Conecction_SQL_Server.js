@@ -7,10 +7,10 @@ require('dotenv').config();
 // Modifica el archivo de configuración (Conecction_SQL_Server.js)
 const dbConfig = {
   user: "sa",
-  password: "edison202",
-  server: "192.168.1.36",
+  password: "codBO123",
+  server: "localhost",
   database: "onlyoffice",
-  port: 1466, // Usa el puerto directamente
+  port: 1433, // Usa el puerto directamente
   options: {
     encrypt: true,
     trustServerCertificate: true,
@@ -83,4 +83,3 @@ module.exports = {
   closePool,
   sql,
 };
-

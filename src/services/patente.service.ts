@@ -120,7 +120,7 @@ export const insertProductoDatos = async (
 
     const jsonData = JSON.stringify({
       id_registro,
-      productos: datosDocumento.productos,
+      productos: JSON.stringify(datosDocumento.productos),
       autoridad: {
         nombre: datosDocumento.solicitante.nombre,
         Rol: datosDocumento.solicitante.cargo,
@@ -131,6 +131,7 @@ export const insertProductoDatos = async (
         codigo: datosDocumento.proyecto.resolucion.numero,
       },
       memorando,
+      tipo: datosDocumento.tipo
     });
 
     const pool = await getConnection();

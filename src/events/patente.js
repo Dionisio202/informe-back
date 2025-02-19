@@ -58,6 +58,7 @@ module.exports = (io, socket) => {
 
   // Evento para agregar productos a un registro de patente
   socket.on("agregar_producto_datos", async (data, callback) => {
+    console.log(data);
     const result = await insertProductoDatos(data);
     callback(result);
   });
