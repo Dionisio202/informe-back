@@ -136,7 +136,7 @@ module.exports = (io, socket) => {
   // Evento para guardar los estados temporales de los formularios
   socket.on("guardar_estado_temporal", async (data, callback) => {
     try {
-      const { id_registro, id_tarea, jsonData, id_funcionario } = data; // Extraer los datos del objeto data
+      const { id_registro, id_tarea, jsonData, id_funcionario, estado } = data; // Extraer los datos del objeto data
 
       //id combinado
       const id_combinado = id_registro + "-" + id_tarea;
@@ -150,15 +150,16 @@ module.exports = (io, socket) => {
         .input("id_registro", sql.VarChar, id_registro)
         .input("id_funcionario", sql.Int, id_funcionario)
         .input("id_tarea", sql.VarChar, id_combinado)
-        .input("jsonData", sql.VarChar, jsonData).query(`
+        .input("jsonData", sql.VarChar, jsonData)
+        .input("estado",sql.VarChar, estado).query(`
           MERGE INTO Tareas_Instancia AS target
-          USING (VALUES (@id_registro, @id_tarea, @jsonData, @id_funcionario)) AS source (id_registro, id_tarea, jsonData,id_funcionario)
+          USING (VALUES (@id_registro, @id_tarea, @jsonData, @id_funcionario, @estado)) AS source (id_registro, id_tarea, jsonData,id_funcionario, estado)
           ON target.id_registro = source.id_registro AND target.id_tareas = source.id_tarea
           WHEN MATCHED THEN
-            UPDATE SET jsonData = source.jsonData
+            UPDATE SET jsonData = source.jsonData, estado = source.estado
           WHEN NOT MATCHED THEN
-            INSERT (id_registro, id_tareas, jsonData, id_funcionario)
-            VALUES (source.id_registro, source.id_tarea, source.jsonData, source.id_funcionario);
+            INSERT (id_registro, id_tareas, jsonData, id_funcionario, estado)
+            VALUES (source.id_registro, source.id_tarea, source.jsonData, source.id_funcionario, source.estado);
         `);
 
       console.log("Estado temporal guardado o actualizado correctamente");
