@@ -10,7 +10,7 @@ const dbConfig = {
   password: "edison202",
   server: "10.9.5.37",
   database: "onlyoffice",
-  port: 1466, // Usa el puerto directamente
+  port: 1433, // Usa el puerto directamente
   options: {
     encrypt: true,
     trustServerCertificate: true,
@@ -83,4 +83,3 @@ module.exports = {
   closePool,
   sql,
 };
-

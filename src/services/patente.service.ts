@@ -23,6 +23,7 @@ export const getTiposProductos = async () => {
     const pool = await getConnection();
     // Ejecutar la consulta para obtener las autoridades
     const result = await pool.request().query("SELECT * FROM Tipos_Productos");
+    console.log("result", result.recordset);
     return { success: true, data: result.recordset };
   } catch (error) {
     return { success: false, error: error };
@@ -114,13 +115,29 @@ export const insertProductoDatos = async (
 
     if (!id_registro || !jsonProductos || !memorando) {
       return { success: false, message: "Todos los campos son obligatorios" };
+    }  
+    // Si jsonProductos es un string, lo parseamos; de lo contrario, lo usamos directamente.
+    const datosDocumento =
+      typeof jsonProductos === "string" ? JSON.parse(jsonProductos) : jsonProductos;
+    
+    // Agregar la propiedad "tipo" a cada producto usando el valor de datosDocumento.tipo
+    if (datosDocumento && Array.isArray(datosDocumento.productos) && datosDocumento.tipo !== undefined) {
+      datosDocumento.productos = datosDocumento.productos.map((producto: any) => ({
+        ...producto,
+        tipo: datosDocumento.tipo
+      }));
     }
-
-    const datosDocumento = JSON.parse(jsonProductos);
-
+    
+    // Asegurarse de que "productos" sea un objeto (si llegara a ser string, se parsea)
+    const productos =
+      typeof datosDocumento.productos === "string"
+        ? JSON.parse(datosDocumento.productos)
+        : datosDocumento.productos;
+    
+    // Construir el objeto final que se enviará al SP
     const jsonData = JSON.stringify({
       id_registro,
-      productos: datosDocumento.productos,
+      productos,
       autoridad: {
         nombre: datosDocumento.solicitante.nombre,
         Rol: datosDocumento.solicitante.cargo,
@@ -131,8 +148,11 @@ export const insertProductoDatos = async (
         codigo: datosDocumento.proyecto.resolucion.numero,
       },
       memorando,
+      tipo: datosDocumento.tipo
     });
-
+    
+    console.log("Datos que se envían al servidor", jsonData);
+    
     const pool = await getConnection();
     await pool
       .request()
