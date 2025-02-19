@@ -73,7 +73,9 @@ export const insertRegistro = async (
     if (!id_funcionario) {
       return { success: false, message: "El id_funcionario es obligatorio" };
     }
-
+    console.log("id_registro", id_registro);
+    console.log("id_funcionario", id_funcionario);
+    console.log("id_proceso", id_proceso);
     const pool = await getConnection();
 
     await pool

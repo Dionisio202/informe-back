@@ -8,7 +8,7 @@ require('dotenv').config();
 const dbConfig = {
   user: "sa",
   password: "edison202",
-  server: "10.9.4.182",
+  server: "192.168.1.36",
   database: "onlyoffice",
   port: 1466, // Usa el puerto directamente
   options: {
