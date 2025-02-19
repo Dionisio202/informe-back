@@ -9,6 +9,7 @@ const {
   insertProceso,
   insertRegistro,
   saveDocument,
+  insertProductoDatos
 } = require("../services/patente.service");
 // Variables de entorno
 require("dotenv").config();
