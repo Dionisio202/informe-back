@@ -9,7 +9,7 @@ const {
   insertProceso,
   insertRegistro,
   saveDocument,
-  insertProductoDatos
+  insertProductoDatos,
 } = require("../services/patente.service");
 // Variables de entorno
 require("dotenv").config();
@@ -58,7 +58,6 @@ module.exports = (io, socket) => {
 
   // Evento para agregar productos a un registro de patente
   socket.on("agregar_producto_datos", async (data, callback) => {
-    console.log(data);
     const result = await insertProductoDatos(data);
     callback(result);
   });
@@ -100,25 +99,22 @@ module.exports = (io, socket) => {
   // Evento para guardar los autores de un registro de patente
   socket.on("set_autores", async (data, callback) => {
     try {
-      const { codigo, json } = data; // Extraer el código y el documento del objeto data
-
-      if (!codigo || !documento) {
+      const { codigo, autores } = data; // Extraer el código y el documento del objeto data
+      if (!codigo || !autores) {
         return callback({
           success: false,
-          message: "Código y documento son obligatorios",
+          message: "Código y autores obligatorios",
         });
       }
-
-      // Convertir el array de personas a formato JSON para enviarlo a SQL Server
-      const jsonAutores = JSON.stringify(json);
       // Obtener la conexión a la base de datos
       const pool = await getConnection();
-
+      console.log("codigo", codigo);
+      console.log("Guardando autores en la base de datos...", autores);
       // Ejecutar el procedimiento almacenado con el JSON de autores y el código de registro
       await pool
         .request()
-        .input("jsonAutores", sql.NVarChar, jsonAutores) // Enviar el JSON como NVARCHAR(MAX)
-        .input("codigoRegistro", sql.Int, codigo) // Enviar el código de registro
+        .input("jsonAutores", sql.NVarChar, autores) // Enviar el JSON como NVARCHAR(MAX)
+        .input("codigoRegistro", sql.VarChar, codigo) // Enviar el código de registro
         .execute("ProcesarAutores"); // Llamar al procedimiento almacenado en SQL Server
 
       console.log("Autores guardados correctamente");
@@ -153,7 +149,7 @@ module.exports = (io, socket) => {
         .input("id_funcionario", sql.Int, id_funcionario)
         .input("id_tarea", sql.VarChar, id_combinado)
         .input("jsonData", sql.VarChar, jsonData)
-        .input("estado",sql.VarChar, estado).query(`
+        .input("estado", sql.VarChar, estado).query(`
           MERGE INTO Tareas_Instancia AS target
           USING (VALUES (@id_registro, @id_tarea, @jsonData, @id_funcionario, @estado)) AS source (id_registro, id_tarea, jsonData,id_funcionario, estado)
           ON target.id_registro = source.id_registro AND target.id_tareas = source.id_tarea
@@ -226,29 +222,28 @@ module.exports = (io, socket) => {
   // Evento para traer el codigo de un documento del evento anterior
   socket.on("obtener_codigo_almacenamiento", async (data, callback) => {
     try {
-      const { id_registro, id_tipo_documento } = data; 
+      const { id_registro, id_tipo_documento } = data;
       const pool = await getConnection();
-  
+
       // Obtener el último documento insertado
       const result = await pool
         .request()
         .input("id_registro_per", sql.VarChar, id_registro)
-        .input("id_tipo_documento", sql.Int, id_tipo_documento)
-        .query(`
+        .input("id_tipo_documento", sql.Int, id_tipo_documento).query(`
           SELECT TOP 1 * 
           FROM Documentos 
           WHERE id_registro_per = @id_registro_per
           AND id_tipo_documento = @id_tipo_documento
           ORDER BY id_documento DESC;
         `);
-  
+
       if (result.recordset.length === 0) {
         return callback({
           success: false,
           message: "No se encontraron documentos",
         });
       }
-  
+
       callback({
         success: true,
         message: "Documento encontrado correctamente",
@@ -262,7 +257,6 @@ module.exports = (io, socket) => {
       });
     }
   });
-  
 
   // Generacion de documentos
   socket.on("generar_documentos", async (data, callback) => {
