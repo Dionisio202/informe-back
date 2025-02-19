@@ -244,7 +244,7 @@ module.exports = (io, socket) => {
       if (result.recordset.length === 0) {
         return callback({
           success: false,
-          message: "No se encontraron documentos",
+          message: "No se encontraron documentos"+"idRegistro :"+id_registro+" tipo "+id_tipo_documento,
         });
       }
   
