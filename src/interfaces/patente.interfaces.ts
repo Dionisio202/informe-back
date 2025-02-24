@@ -22,4 +22,5 @@ export interface Registro {
     codigo_almacenamiento?: string;
     codigo_documento?: string;
     id_docuemnto_per?: string;
+    id_producto_per?: string;
   }
