@@ -208,8 +208,8 @@ export const saveDocument = async (
       .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
       .input("codigo_documento", sql.VarChar(100), codigo_documento)
       .input("id_tipo_documento", sql.Int, id_tipo_documento).query(`
-          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, codigo_documento, id_tipo_documento) 
-          VALUES (@id_registro_per, @codigo_almacenamiento, @codigo_documento, @id_tipo_documento)
+          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, codigo_documento, id_tipo_documento, fecha_doc) 
+          VALUES (@id_registro_per, @codigo_almacenamiento, @codigo_documento, @id_tipo_documento, GETDATE())
         `);
 
     console.log("✅ Datos insertados en la base de datos");

@@ -189,6 +189,7 @@ router.get("/verificar-documento", async (req, res) => {
 router.post("/get-document", async (req, res) => {
   let { nombre, id_registro_per, id_tipo_documento, document, memorando } = req.body;
 
+  // Validación de parámetros obligatorios
   if (!nombre) {
     return res.status(400).json({ error: "El parámetro 'nombre' es obligatorio" });
   }
@@ -204,6 +205,7 @@ router.post("/get-document", async (req, res) => {
 
   try {
     let pool = await getConnection();
+    // Verificamos si ya existe un documento con ese código de almacenamiento
     let checkResult = await pool
       .request()
       .input("codigo_almacenamiento", sql.VarChar(100), nombreFormateado)
@@ -213,11 +215,6 @@ router.post("/get-document", async (req, res) => {
     console.log("🔍 Documento encontrado en la BD:", documentExists);
 
     if (!documentExists) {
-      // Validamos que se hayan enviado los parámetros necesarios para insertar el documento en la BD
-      if (!id_registro_per || !id_tipo_documento) {
-        return res.status(400).json({ error: "Los parámetros 'id_registro_per' y 'id_tipo_documento' son obligatorios para generar un nuevo documento." });
-      }
-
       // Decodificar el documento recibido (se asume que viene en base64)
       const documentBuffer = Buffer.from(document, "base64");
 
@@ -225,24 +222,25 @@ router.post("/get-document", async (req, res) => {
       const newFileName = `${nombreFormateado}.pdf`;
       const newFilePath = path.join("/app/documents", newFileName);
 
-      // Guardar el documento recibido en el sistema de archivos
+      // Guardar el documento en el sistema de archivos
       await fs.promises.writeFile(newFilePath, documentBuffer);
 
-      // Insertar el registro en la base de datos
-      await pool.request()
-        .input("id_registro_per", sql.VarChar(50), id_registro_per)
-        .input("codigo_almacenamiento", sql.VarChar(100), nombreFormateado)
-        .input("id_tipo_documento", sql.Int, id_tipo_documento)
-        .input("codigo_documento", sql.VarChar(100), memorando)
-        .query(`
-          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento, codigo_documento) 
-          VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento, @codigo_documento)
-        `);
-
-      return res.status(201).json({ 
-        message: "Documento no encontrado. Se ha recibido y almacenado un nuevo documento.",
-        filePath: newFilePath
+      // Reutilizamos la función saveDocument para insertar el registro en la BD
+      const result = await saveDocument({
+        id_registro: id_registro_per,
+        codigo_almacenamiento: nombreFormateado,
+        id_tipo_documento: id_tipo_documento,
+        codigo_documento: memorando,
       });
+
+      if (result.success) {
+        return res.status(201).json({
+          message: "Documento no encontrado. Se ha recibido y almacenado un nuevo documento.",
+          filePath: newFilePath,
+        });
+      } else {
+        return res.status(500).json({ error: result.message });
+      }
     }
 
     res.status(200).json({ exists: documentExists });
@@ -251,6 +249,7 @@ router.post("/get-document", async (req, res) => {
     res.status(500).json({ error: "Error al verificar el documento en la BD", details: error.message });
   }
 });
+
 
 
 
@@ -325,6 +324,52 @@ router.get("/save-memorando", async (req, res) => {
       codigo_documento: codigo_documento,
       codigo_almacenamiento: codigo_almacenamiento,
     });
+  });
+  
+
+  //Obtener documento con fecha 
+
+  router.get("/last-document", async (req, res) => {
+    // Se espera que el parámetro id_tipo_documento venga en la query string
+    const { id_tipo_documento } = req.query;
+    if (!id_tipo_documento) {
+      return res.status(400).json({ error: "El parámetro 'id_tipo_documento' es obligatorio" });
+    }
+  
+    try {
+      let pool = await getConnection();
+      // Seleccionamos el documento con la fecha más reciente para el tipo de documento indicado
+      const result = await pool.request()
+        .input("id_tipo_documento", sql.Int, id_tipo_documento)
+        .query(`
+          SELECT TOP 1 fecha_doc
+          FROM Documentos
+          WHERE id_tipo_documento = @id_tipo_documento
+          ORDER BY fecha_doc DESC
+        `);
+  
+      if (result.recordset.length === 0) {
+        return res.status(404).json({ error: "No se encontró ningún documento para ese tipo" });
+      }
+  
+      const lastDate = result.recordset[0].fecha_doc; // Se asume que es de tipo Date o string en formato fecha
+      const fechaDocumento = new Date(lastDate);
+      const fechaActual = new Date();
+  
+      // Cálculo simple: se considera 1 año = 365 días
+      const unAñoMs = 365 * 24 * 60 * 60 * 1000;
+      const diffMs = fechaActual.getTime() - fechaDocumento.getTime();
+      const yaPasoUnAño = diffMs >= unAñoMs;
+  
+      return res.status(200).json({
+        success: true,
+        fecha_doc: fechaDocumento,
+        yaPasoUnAño: yaPasoUnAño
+      });
+    } catch (error:any) {
+      console.error("❌ Error al obtener el último documento:", error.message, error.stack);
+      res.status(500).json({ error: "Error al obtener el último documento", details: error.message });
+    }
   });
   
 export default router;
