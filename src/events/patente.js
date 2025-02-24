@@ -11,6 +11,7 @@ const {
   saveDocument,
   insertProductoDatos,
 } = require("../services/patente.service");
+const extractMemoCode = require("../utils/codigo_memorando");
 // Variables de entorno
 require("dotenv").config();
 
@@ -335,6 +336,27 @@ module.exports = (io, socket) => {
         success: false,
         message: "Error al generar el documento",
         error: err.message, // Envía detalles del error para depuración
+      });
+    }
+  });
+
+  // Evento apra subir un documento
+  socket.on("subir_documento", async (data, callback) => {
+    try {
+      const { documento } = data; // Extraer los datos del objeto data
+
+      // Extraer codigo del memorando del documento
+      const codigo = await extractMemoCode(documento);
+      return callback({
+        success: true,
+        message: "Documento mapeado correctamente",
+        codigo: codigo,
+      });
+    } catch (err) {
+      console.error("Error al subir el documento:", err);
+      callback({
+        success: false,
+        message: "Error al subir el documento",
       });
     }
   });

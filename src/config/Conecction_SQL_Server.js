@@ -4,7 +4,6 @@ require('dotenv').config();
 
 
 // Configuración de la conexión a SQL Server
-// Modifica el archivo de configuración (Conecction_SQL_Server.js)
 const dbConfig = {
   user: "sa",
   password: "edison202",

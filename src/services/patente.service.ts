@@ -176,6 +176,7 @@ export const saveDocument = async (
     codigo_documento,
     id_tipo_documento,
     codigo_almacenamiento,
+    id_producto_per = null,
   } = documento;
   try {
     const pool = await getConnection();
@@ -198,6 +199,9 @@ export const saveDocument = async (
     }
 
     // Si no existe, proceder a insertar el nuevo registro
+    //Si el id_producto_per es nulo, se inserta el documento solo en la tabla Documentos
+    if (!id_producto_per) {
+
     await pool
       .request()
       .input("id_registro_per", sql.VarChar(50), id_registro)
@@ -213,6 +217,22 @@ export const saveDocument = async (
       success: true,
       message: "Documento guardado e información insertada en la BD",
     };
+  }else{
+    //Si el id_producto_per no es nulo, se inserta el documento en la tabla Documentos y en la tabla Documentos_Productos
+    await pool.request()
+    .input("id_registro_per", sql.VarChar(50), id_registro)
+    .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
+    .input("codigo_documento", sql.VarChar(100), codigo_documento)
+    .input("id_tipo_documento", sql.Int, id_tipo_documento)
+    .input("id_producto_per", sql.Int, id_producto_per)
+    .execute("InsertDocumentoConProducto");
+    console.log("✅ Datos insertados en la base de datos");
+    return {
+      success: true,
+      message: "Documento guardado e información insertada en la BD",
+    };
+  }
+  
   } catch (dbError) {
     console.error(dbError);
     return { success: false, message: "Error al guardar los datos en la BD" };
