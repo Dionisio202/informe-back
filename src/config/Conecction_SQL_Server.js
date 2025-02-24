@@ -8,9 +8,9 @@ require('dotenv').config();
 const dbConfig = {
   user: "sa",
   password: "edison202",
-  server: "10.9.5.37",
+  server: "formulario.midominio.com",
   database: "onlyoffice",
-  port: 1433, // Usa el puerto directamente
+  port: 1466, // Usa el puerto directamente
   options: {
     encrypt: true,
     trustServerCertificate: true,
