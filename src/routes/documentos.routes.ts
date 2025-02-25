@@ -185,11 +185,9 @@ router.get("/verificar-documento", async (req, res) => {
 
 
 ////guardar un documento 
-
 router.post("/get-document", async (req, res) => {
   let { nombre, id_registro_per, id_tipo_documento, document, memorando } = req.body;
 
-  // Validación de parámetros obligatorios
   if (!nombre) {
     return res.status(400).json({ error: "El parámetro 'nombre' es obligatorio" });
   }
@@ -205,7 +203,6 @@ router.post("/get-document", async (req, res) => {
 
   try {
     let pool = await getConnection();
-    // Verificamos si ya existe un documento con ese código de almacenamiento
     let checkResult = await pool
       .request()
       .input("codigo_almacenamiento", sql.VarChar(100), nombreFormateado)
@@ -215,6 +212,11 @@ router.post("/get-document", async (req, res) => {
     console.log("🔍 Documento encontrado en la BD:", documentExists);
 
     if (!documentExists) {
+      // Validamos que se hayan enviado los parámetros necesarios para insertar el documento en la BD
+      if (!id_registro_per || !id_tipo_documento) {
+        return res.status(400).json({ error: "Los parámetros 'id_registro_per' y 'id_tipo_documento' son obligatorios para generar un nuevo documento." });
+      }
+
       // Decodificar el documento recibido (se asume que viene en base64)
       const documentBuffer = Buffer.from(document, "base64");
 
@@ -222,25 +224,27 @@ router.post("/get-document", async (req, res) => {
       const newFileName = `${nombreFormateado}.pdf`;
       const newFilePath = path.join("/app/documents", newFileName);
 
-      // Guardar el documento en el sistema de archivos
+      // Guardar el documento recibido en el sistema de archivos
       await fs.promises.writeFile(newFilePath, documentBuffer);
 
-      // Reutilizamos la función saveDocument para insertar el registro en la BD
-      const result = await saveDocument({
-        id_registro: id_registro_per,
-        codigo_almacenamiento: nombreFormateado,
-        id_tipo_documento: id_tipo_documento,
-        codigo_documento: memorando,
-      });
+      // Insertar el registro en la base de datos
+      await pool.request()
+      .input("id_registro_per", sql.VarChar(50), id_registro_per)
+      .input("codigo_almacenamiento", sql.VarChar(100), nombreFormateado)
+      .input("id_tipo_documento", sql.Int, id_tipo_documento)
+      .input("codigo_documento", sql.VarChar(100), memorando)
+      .query(
+        `INSERT INTO Documentos 
+          (id_registro_per, codigo_almacenamiento, id_tipo_documento, codigo_documento, fecha_doc)
+        VALUES 
+          (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento, @codigo_documento, GETDATE())`
+      );
+    
 
-      if (result.success) {
-        return res.status(201).json({
-          message: "Documento no encontrado. Se ha recibido y almacenado un nuevo documento.",
-          filePath: newFilePath,
-        });
-      } else {
-        return res.status(500).json({ error: result.message });
-      }
+      return res.status(201).json({ 
+        message: "Documento no encontrado. Se ha recibido y almacenado un nuevo documento.",
+        filePath: newFilePath
+      });
     }
 
     res.status(200).json({ exists: documentExists });
@@ -249,7 +253,6 @@ router.post("/get-document", async (req, res) => {
     res.status(500).json({ error: "Error al verificar el documento en la BD", details: error.message });
   }
 });
-
 
 
 
