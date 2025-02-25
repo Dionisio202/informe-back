@@ -145,22 +145,13 @@ module.exports = (io, socket) => {
 
       // Usar MERGE para hacer un "upsert" (insertar o actualizar)
       await pool
-        .request()
-        .input("id_registro", sql.VarChar, id_registro)
-        .input("id_funcionario", sql.Int, id_funcionario)
-        .input("id_tarea", sql.VarChar, id_combinado)
-        .input("jsonData", sql.VarChar, jsonData)
-        .input("estado", sql.VarChar, estado).query(`
-          MERGE INTO Tareas_Instancia AS target
-          USING (VALUES (@id_registro, @id_tarea, @jsonData, @id_funcionario, @estado)) AS source (id_registro, id_tarea, jsonData,id_funcionario, estado)
-          ON target.id_registro = source.id_registro AND target.id_tareas = source.id_tarea
-          WHEN MATCHED THEN
-            UPDATE SET jsonData = source.jsonData, estado = source.estado
-          WHEN NOT MATCHED THEN
-            INSERT (id_registro, id_tareas, jsonData, id_funcionario, estado)
-            VALUES (source.id_registro, source.id_tarea, source.jsonData, source.id_funcionario, source.estado);
-        `);
-
+      .request()
+      .input("id_registro", sql.VarChar, id_registro)
+      .input("id_tarea", sql.VarChar, id_combinado)
+      .input("jsonData", sql.VarChar, jsonData)
+      .input("id_funcionario", sql.Int, id_funcionario)
+      .input("estado", sql.VarChar, estado)
+      .query("EXEC UpsertTareaInstancia @id_registro, @id_tarea, @jsonData, @id_funcionario, @estado");
       console.log("Estado temporal guardado o actualizado correctamente");
 
       // Enviar respuesta de éxito al cliente
@@ -241,7 +232,12 @@ module.exports = (io, socket) => {
       if (result.recordset.length === 0) {
         return callback({
           success: false,
-          message: "No se encontraron documentos"+"idRegistro :"+id_registro+" tipo "+id_tipo_documento,
+          message:
+            "No se encontraron documentos" +
+            "idRegistro :" +
+            id_registro +
+            " tipo " +
+            id_tipo_documento,
         });
       }
 
