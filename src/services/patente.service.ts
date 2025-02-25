@@ -115,44 +115,53 @@ export const insertProductoDatos = async (
 
     if (!id_registro || !jsonProductos || !memorando) {
       return { success: false, message: "Todos los campos son obligatorios" };
-    }  
+    }
     // Si jsonProductos es un string, lo parseamos; de lo contrario, lo usamos directamente.
     const datosDocumento =
-      typeof jsonProductos === "string" ? JSON.parse(jsonProductos) : jsonProductos;
-    
+      typeof jsonProductos === "string"
+        ? JSON.parse(jsonProductos)
+        : jsonProductos;
+
     // Agregar la propiedad "tipo" a cada producto usando el valor de datosDocumento.tipo
-    if (datosDocumento && Array.isArray(datosDocumento.productos) && datosDocumento.tipo !== undefined) {
-      datosDocumento.productos = datosDocumento.productos.map((producto: any) => ({
-        ...producto,
-        tipo: datosDocumento.tipo
-      }));
+    if (
+      datosDocumento &&
+      Array.isArray(datosDocumento.productos) &&
+      datosDocumento.tipo !== undefined
+    ) {
+      datosDocumento.productos = datosDocumento.productos.map(
+        (producto: any) => ({
+          ...producto,
+          tipo: datosDocumento.tipo,
+        })
+      );
     }
-    
+
     // Asegurarse de que "productos" sea un objeto (si llegara a ser string, se parsea)
     const productos =
       typeof datosDocumento.productos === "string"
         ? JSON.parse(datosDocumento.productos)
         : datosDocumento.productos;
-    
+    //Obtener un solo producto
+    const producto = await obtenerSiguienteProducto(memorando, productos);
     // Construir el objeto final que se enviará al SP
     const jsonData = JSON.stringify({
       id_registro,
-      productos,
+      productos: [producto],
       autoridad: {
         nombre: datosDocumento.solicitante.nombre,
         Rol: datosDocumento.solicitante.cargo,
-        facultad: "definir en el formato",
+        facultad: datosDocumento.solicitante.facultad,
       },
       proyecto: {
         nombre: datosDocumento.proyecto.titulo,
         codigo: datosDocumento.proyecto.resolucion.numero,
       },
       memorando,
-      tipo: datosDocumento.tipo
+      tipo: datosDocumento.tipo,
     });
-    
+
     console.log("Datos que se envían al servidor", jsonData);
-    
+
     const pool = await getConnection();
     await pool
       .request()
@@ -167,6 +176,44 @@ export const insertProductoDatos = async (
   }
 };
 
+const obtenerSiguienteProducto = async (
+  memorando: string,
+  productos: any[]
+): Promise<any | null> => {
+  try {
+    if (!memorando || !productos || productos.length === 0) {
+      return null;
+    }
+
+    const pool = await getConnection();
+
+    // Obtener los productos ya registrados con ese memorando
+    const result = await pool
+      .request()
+      .input("memorando", sql.NVarChar, memorando).query(`
+        SELECT DISTINCT p.nombre 
+        FROM Productos p
+        JOIN Documentos d ON p.id_registro_per = d.id_registro_per
+        WHERE d.codigo_documento = @memorando
+      `);
+
+    const productosRegistrados = result.recordset.map((row: any) => row.nombre);
+
+    // Encontrar el primer producto que no esté registrado
+    const productoNuevo = productos.find(
+      (producto) => !productosRegistrados.includes(producto.nombre)
+    );
+    if (!productoNuevo) {
+      console.log("Todos los productos ya han sido registrados");
+      return null;
+    }
+    return productoNuevo;
+  } catch (err) {
+    console.error("Error al obtener el siguiente producto:", err);
+    return null;
+  }
+};
+
 // Guardado de documentos en la base de datos
 export const saveDocument = async (
   documento: Documento
@@ -176,7 +223,6 @@ export const saveDocument = async (
     codigo_documento,
     id_tipo_documento,
     codigo_almacenamiento,
-    id_producto_per = null,
   } = documento;
   try {
     const pool = await getConnection();
@@ -197,42 +243,22 @@ export const saveDocument = async (
         message: "El documento con el código ya existe en la base de datos",
       };
     }
-
     // Si no existe, proceder a insertar el nuevo registro
-    //Si el id_producto_per es nulo, se inserta el documento solo en la tabla Documentos
-    if (!id_producto_per) {
-
-    await pool
-      .request()
-      .input("id_registro_per", sql.VarChar(50), id_registro)
-      .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
-      .input("codigo_documento", sql.VarChar(100), codigo_documento)
-      .input("id_tipo_documento", sql.Int, id_tipo_documento).query(`
+      await pool
+        .request()
+        .input("id_registro_per", sql.VarChar(50), id_registro)
+        .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
+        .input("codigo_documento", sql.VarChar(100), codigo_documento)
+        .input("id_tipo_documento", sql.Int, id_tipo_documento).query(`
           INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, codigo_documento, id_tipo_documento, fecha_doc) 
           VALUES (@id_registro_per, @codigo_almacenamiento, @codigo_documento, @id_tipo_documento, GETDATE())
         `);
 
-    console.log("✅ Datos insertados en la base de datos");
-    return {
-      success: true,
-      message: "Documento guardado e información insertada en la BD",
-    };
-  }else{
-    //Si el id_producto_per no es nulo, se inserta el documento en la tabla Documentos y en la tabla Documentos_Productos
-    await pool.request()
-    .input("id_registro_per", sql.VarChar(50), id_registro)
-    .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
-    .input("codigo_documento", sql.VarChar(100), codigo_documento)
-    .input("id_tipo_documento", sql.Int, id_tipo_documento)
-    .input("id_producto_per", sql.Int, id_producto_per)
-    .execute("InsertDocumentoConProducto");
-    console.log("✅ Datos insertados en la base de datos");
-    return {
-      success: true,
-      message: "Documento guardado e información insertada en la BD",
-    };
-  }
-  
+      console.log("✅ Datos insertados en la base de datos");
+      return {
+        success: true,
+        message: "Documento guardado e información insertada en la BD",
+      };
   } catch (dbError) {
     console.error(dbError);
     return { success: false, message: "Error al guardar los datos en la BD" };
@@ -242,10 +268,7 @@ export const saveDocument = async (
 export const updateDocument = async (
   documento: Documento
 ): Promise<{ success: boolean; message: string }> => {
-  const {
-    codigo_documento,
-    codigo_almacenamiento,
-  } = documento;
+  const { codigo_documento, codigo_almacenamiento } = documento;
 
   try {
     const pool = await getConnection();
@@ -253,8 +276,7 @@ export const updateDocument = async (
     await pool
       .request()
       .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
-      .input("codigo_documento", sql.VarChar(100), codigo_documento)
-      .query(`
+      .input("codigo_documento", sql.VarChar(100), codigo_documento).query(`
           UPDATE Documentos
           SET 
             codigo_documento = @codigo_documento
@@ -267,6 +289,9 @@ export const updateDocument = async (
     };
   } catch (dbError) {
     console.error(dbError);
-    return { success: false, message: "Error al actualizar el documento en la BD" };
+    return {
+      success: false,
+      message: "Error al actualizar el documento en la BD",
+    };
   }
 };
