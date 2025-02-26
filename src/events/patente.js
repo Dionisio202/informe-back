@@ -363,18 +363,19 @@ module.exports = (io, socket) => {
   socket.on("datos_proceso", async (callback) => {
     try {
       const pool = await getConnection();
-      // Obtener el último documento insertado
-      const result = await pool.request().query(`EXEC GenerarJSONProceso`);
+      const result = await pool.request().query("EXEC GenerarJSONProceso");
+      // Acceder a la propiedad ResultadoJSON de la primera fila
+      const jsonData = result.recordset[0].ResultadoJSON;
       return callback({
         success: true,
         message: "Datos encontrados correctamente",
-        jsonData: result.recordset.ResultadoJSON,
+        jsonData
       });
     } catch (err) {
       console.error("Error al obtener los datos", err);
       callback({
         success: false,
-        message: "Error al obtener los datos",
+        message: "Error al obtener los datos"
       });
     }
   });
