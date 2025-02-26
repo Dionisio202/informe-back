@@ -145,13 +145,15 @@ module.exports = (io, socket) => {
 
       // Usar MERGE para hacer un "upsert" (insertar o actualizar)
       await pool
-      .request()
-      .input("id_registro", sql.VarChar, id_registro)
-      .input("id_tarea", sql.VarChar, id_combinado)
-      .input("jsonData", sql.VarChar, jsonData)
-      .input("id_funcionario", sql.Int, id_funcionario)
-      .input("estado", sql.VarChar, estado)
-      .query("EXEC UpsertTareaInstancia @id_registro, @id_tarea, @jsonData, @id_funcionario, @estado");
+        .request()
+        .input("id_registro", sql.VarChar, id_registro)
+        .input("id_tarea", sql.VarChar, id_combinado)
+        .input("jsonData", sql.VarChar, jsonData)
+        .input("id_funcionario", sql.Int, id_funcionario)
+        .input("estado", sql.VarChar, estado)
+        .query(
+          "EXEC UpsertTareaInstancia @id_registro, @id_tarea, @jsonData, @id_funcionario, @estado"
+        );
       console.log("Estado temporal guardado o actualizado correctamente");
 
       // Enviar respuesta de éxito al cliente
@@ -353,6 +355,26 @@ module.exports = (io, socket) => {
       callback({
         success: false,
         message: "Error al subir el documento",
+      });
+    }
+  });
+
+  //Evento para generar el reporte de tabla
+  socket.on("datos_proceso", async (callback) => {
+    try {
+      const pool = await getConnection();
+      // Obtener el último documento insertado
+      const result = await pool.request().query(`EXEC GenerarJSONProceso`);
+      return callback({
+        success: true,
+        message: "Datos encontrados correctamente",
+        jsonData: result.recordset.ResultadoJSON,
+      });
+    } catch (err) {
+      console.error("Error al obtener los datos", err);
+      callback({
+        success: false,
+        message: "Error al obtener los datos",
       });
     }
   });
