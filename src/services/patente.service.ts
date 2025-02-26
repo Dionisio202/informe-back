@@ -142,7 +142,8 @@ export const insertProductoDatos = async (
         ? JSON.parse(datosDocumento.productos)
         : datosDocumento.productos;
     //Obtener un solo producto
-    const producto = await obtenerSiguienteProducto(memorando, productos);
+    let producto = await obtenerSiguienteProducto(memorando, productos);
+    producto.tipo = datosDocumento.tipo;
     // Construir el objeto final que se enviará al SP
     const jsonData = JSON.stringify({
       id_registro,
@@ -157,7 +158,7 @@ export const insertProductoDatos = async (
         codigo: datosDocumento.proyecto.resolucion.numero,
       },
       memorando,
-      tipo: datosDocumento.tipo,
+      tipo: 1,
     });
 
     console.log("Datos que se envían al servidor", jsonData);
