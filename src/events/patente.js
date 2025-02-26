@@ -135,7 +135,7 @@ module.exports = (io, socket) => {
   // Evento para guardar los estados temporales de los formularios
   socket.on("guardar_estado_temporal", async (data, callback) => {
     try {
-      const { id_registro, id_tarea, jsonData, id_funcionario, estado } = data; // Extraer los datos del objeto data
+      const { id_registro, id_tarea, jsonData, id_funcionario, estado, nombre_tarea } = data; // Extraer los datos del objeto data
 
       //id combinado
       const id_combinado = id_registro + "-" + id_tarea;
@@ -151,8 +151,9 @@ module.exports = (io, socket) => {
         .input("jsonData", sql.VarChar, jsonData)
         .input("id_funcionario", sql.Int, id_funcionario)
         .input("estado", sql.VarChar, estado)
+        .input("nombre_tarea", sql.VarChar, nombre_tarea)
         .query(
-          "EXEC UpsertTareaInstancia @id_registro, @id_tarea, @jsonData, @id_funcionario, @estado"
+          "EXEC UpsertTareaInstancia @id_registro, @id_tarea, @jsonData, @id_funcionario, @estado, @nombre_tarea"
         );
       console.log("Estado temporal guardado o actualizado correctamente");
 
