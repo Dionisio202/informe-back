@@ -10,6 +10,7 @@ const {
   insertRegistro,
   saveDocument,
   insertProductoDatos,
+  getReegistrosDatos,
 } = require("../services/patente.service");
 const extractMemoCode = require("../utils/codigo_memorando");
 // Variables de entorno
@@ -135,7 +136,14 @@ module.exports = (io, socket) => {
   // Evento para guardar los estados temporales de los formularios
   socket.on("guardar_estado_temporal", async (data, callback) => {
     try {
-      const { id_registro, id_tarea, jsonData, id_funcionario, estado, nombre_tarea } = data; // Extraer los datos del objeto data
+      const {
+        id_registro,
+        id_tarea,
+        jsonData,
+        id_funcionario,
+        estado,
+        nombre_tarea,
+      } = data; // Extraer los datos del objeto data
 
       //id combinado
       const id_combinado = id_registro + "-" + id_tarea;
@@ -370,14 +378,20 @@ module.exports = (io, socket) => {
       return callback({
         success: true,
         message: "Datos encontrados correctamente",
-        jsonData
+        jsonData,
       });
     } catch (err) {
       console.error("Error al obtener los datos", err);
       callback({
         success: false,
-        message: "Error al obtener los datos"
+        message: "Error al obtener los datos",
       });
     }
+  });
+
+  //Evento para los datos de productos registrados
+  socket.on("datos_registro", async (callback) => {
+    const result = await getReegistrosDatos();
+    callback(result);
   });
 };

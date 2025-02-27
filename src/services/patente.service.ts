@@ -296,3 +296,42 @@ export const updateDocument = async (
     };
   }
 };
+
+export const getReegistrosDatos = async (): Promise<{
+  success: boolean;
+  message: string;
+  data: any[]
+}> => {
+  try {
+    const pool = await getConnection();
+
+    const result = await pool.request().query(`
+      SELECT 
+        p.nombre AS nombre_producto,
+        r.fecha_registro,
+        r.fecha_finalizacion,
+        r.estado,
+        r.estado_proceso,
+        a.institucion_representa AS facultad, 
+        r.id_registro
+      FROM Registros r
+      LEFT JOIN Productos p ON p.id_registro_per = r.id_registro
+      LEFT JOIN Autoridades a ON a.id_persona_autoridad = r.id_funcionario;
+    `);
+
+    console.log("✅ Datos Extraidos con Exito");
+
+    return {
+      success: true,
+      message: "Datos Extraidos con Exito",
+      data: result.recordset
+    };
+  } catch (dbError) {
+    console.error(dbError);
+    return {
+      success: false,
+      message: "Error al extraer datos",
+      data: []
+    };
+  }
+};
