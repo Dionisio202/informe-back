@@ -315,8 +315,8 @@ export const getReegistrosDatos = async (): Promise<{
         a.institucion_representa AS facultad, 
         r.id_registro
       FROM Registros r
-      LEFT JOIN Productos p ON p.id_registro_per = r.id_registro
-      LEFT JOIN Autoridades a ON a.id_persona_autoridad = r.id_funcionario;
+      JOIN Productos p ON p.id_registro_per = r.id_registro
+      JOIN Autoridades a ON a.id_persona_autoridad = r.id_funcionario;
     `);
 
     console.log("✅ Datos Extraidos con Exito");
