@@ -63,8 +63,9 @@ function procesarTexto(text) {
         numero: "",
         fecha: "",
       },
+      carrera: "", // nueva propiedad para la carrera
     },
-  };
+  };  
 
   // Expresiones regulares
   const fechaCiudadRegex = /^([^,]+),\s*(.+)/;
@@ -72,6 +73,7 @@ function procesarTexto(text) {
   const productoRegex = /^\d+\.\-\s*(.+)/i;
   const proyectoRegex = /(Proyecto de ([A-Za-zÁÉÍÓÚáéíóúñ]+))\s*“(.+?)”/i;
   const fechaAprobacionRegex = /con fecha\s+(.+)/i;
+  const carreraRegex = /(?:en\s+la\s+)?carrera\s+de\s+([A-Za-zÁÉÍÓÚáéíóúñ\s]+)/i;
 
   // Extraer ciudad y fecha sin importar el formato de la fecha
   let fechaCiudadMatch = paragraphs[0].match(fechaCiudadRegex);
@@ -135,6 +137,15 @@ function procesarTexto(text) {
       );
     }
   });
+
+  // Extraer la carrera
+paragraphs.forEach((paragraph) => {
+  let carreraMatch = paragraph.match(carreraRegex);
+  if (carreraMatch) {
+    // Se capitaliza y se remueve espacios adicionales
+    data.proyecto.carrera = capitalizarTexto(carreraMatch[1].trim());
+  }
+});
 
   return data;
 }

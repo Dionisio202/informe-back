@@ -297,7 +297,7 @@ export const updateDocument = async (
   }
 };
 
-export const getReegistrosDatos = async (): Promise<{
+export const getRegistrosDatos = async (): Promise<{
   success: boolean;
   message: string;
   data: any[]

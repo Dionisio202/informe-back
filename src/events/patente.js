@@ -10,7 +10,7 @@ const {
   insertRegistro,
   saveDocument,
   insertProductoDatos,
-  getReegistrosDatos,
+  getRegistrosDatos,
 } = require("../services/patente.service");
 const extractMemoCode = require("../utils/codigo_memorando");
 // Variables de entorno
@@ -391,7 +391,7 @@ module.exports = (io, socket) => {
 
   //Evento para los datos de productos registrados
   socket.on("datos_registro", async (callback) => {
-    const result = await getReegistrosDatos();
+    const result = await getRegistrosDatos();
     callback(result);
   });
 };
