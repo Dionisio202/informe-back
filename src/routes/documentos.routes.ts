@@ -62,7 +62,7 @@ router.post('/save-document', (req:any, res:any) => {
 
 
 router.get("/verificar-documento", async (req, res) => {
-  const { key, nombre, id_registro_per, id_tipo_documento } = req.query;
+  const { key, nombre, id_registro_per, id_tipo_documento,id_tarea_per } = req.query;
 
   if (!key) {
     return res.status(400).json({ error: "El parámetro 'key' es obligatorio" });
@@ -101,13 +101,14 @@ router.get("/verificar-documento", async (req, res) => {
 
       // Insertamos el registro en la base de datos, tal como se realiza en el endpoint POST
       await pool.request()
-        .input("id_registro_per", sql.VarChar(50), id_registro_per)
-        .input("codigo_almacenamiento", sql.VarChar(100), key)
-        .input("id_tipo_documento", sql.Int, id_tipo_documento)
-        .query(`
-          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento) 
-          VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento)
-        `);
+      .input("id_registro_per", sql.VarChar(50), id_registro_per)
+      .input("codigo_almacenamiento", sql.VarChar(100), key)
+      .input("id_tipo_documento", sql.Int, id_tipo_documento)
+      .input("id_tarea_per", sql.VarChar(100), id_tarea_per)
+      .query(`
+        INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento, id_tarea_per, fecha_doc) 
+        VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento,@id_tarea_per,GETDATE())
+      `);
 
       return res.status(201).json({ 
         message: "Documento no encontrado. Se ha generado un nuevo documento basado en la plantilla y se ha almacenado en la BD.",
@@ -121,9 +122,9 @@ router.get("/verificar-documento", async (req, res) => {
     res.status(500).json({ error: "Error al verificar el documento en la BD", details: error.message });
   }
 });
-
+///POrque hay 2 ?
 router.get("/verificar-documento", async (req, res) => {
-  const { key, nombre, id_registro_per, id_tipo_documento } = req.query;
+  const { key, nombre, id_registro_per, id_tipo_documento ,id_tarea_per} = req.query;
 
   if (!key) {
     return res.status(400).json({ error: "El parámetro 'key' es obligatorio" });
@@ -165,9 +166,10 @@ router.get("/verificar-documento", async (req, res) => {
         .input("id_registro_per", sql.VarChar(50), id_registro_per)
         .input("codigo_almacenamiento", sql.VarChar(100), key)
         .input("id_tipo_documento", sql.Int, id_tipo_documento)
+        .input("id_tarea_per", sql.VarChar(100), id_tarea_per)
         .query(`
-          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento) 
-          VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento)
+          INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento, id_tarea_per, fecha_doc) 
+          VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento,@id_tarea_per,GETDATE())
         `);
 
       return res.status(201).json({ 
@@ -186,7 +188,7 @@ router.get("/verificar-documento", async (req, res) => {
 
 ////guardar un documento 
 router.post("/get-document", async (req, res) => {
-  let { nombre, id_registro_per, id_tipo_documento, document, memorando } = req.body;
+  let { nombre, id_registro_per, id_tipo_documento, document, memorando,id_tarea_per } = req.body;
 
   if (!nombre) {
     return res.status(400).json({ error: "El parámetro 'nombre' es obligatorio" });
@@ -233,11 +235,12 @@ router.post("/get-document", async (req, res) => {
       .input("codigo_almacenamiento", sql.VarChar(100), nombreFormateado)
       .input("id_tipo_documento", sql.Int, id_tipo_documento)
       .input("codigo_documento", sql.VarChar(100), memorando)
+      .input("id_tarea_per", sql.VarChar(100), id_tarea_per)
       .query(
         `INSERT INTO Documentos 
-          (id_registro_per, codigo_almacenamiento, id_tipo_documento, codigo_documento, fecha_doc)
+          (id_registro_per, codigo_almacenamiento, id_tipo_documento, codigo_documento,id_tarea_per, fecha_doc)
         VALUES 
-          (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento, @codigo_documento, GETDATE())`
+          (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento, @codigo_documento,@id_tarea_per,GETDATE())`
       );
     
 
@@ -257,7 +260,7 @@ router.post("/get-document", async (req, res) => {
 
 
 router.get("/save-memorando", async (req, res) => {
-  const { key, id_tipo_documento ,id_registro} = req.query;
+  const { key, id_tipo_documento ,id_registro,id_tarea_per} = req.query;
 
   if (!key) {
     return res.status(400).json({ error: "El parámetro 'key' es obligatorio" });
@@ -271,7 +274,8 @@ router.get("/save-memorando", async (req, res) => {
     codigo_documento: key,
     id_documento: "",
     codigo_almacenamiento: "",
-    id_docuemnto_per: ""
+    id_docuemnto_per: "",
+    id_tarea_per:id_tarea_per
   });
 
   });

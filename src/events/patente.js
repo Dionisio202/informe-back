@@ -321,12 +321,14 @@ module.exports = (io, socket) => {
         codigo_almacenamiento: outputFileNameCCDP,
         id_tipo_documento: "7",
         codigo_documento: "CCDP-" + id_combinado,
+        id_tarea_per:id_combinado
       });
       await saveDocument({
         id_registro: id_registro,
         codigo_almacenamiento: outputFileNameAPP,
         id_tipo_documento: "8",
         codigo_documento: "APP-" + id_combinado,
+        id_tarea_per:id_combinado
       });
       // Enviar respuesta de éxito al cliente
       callback({
