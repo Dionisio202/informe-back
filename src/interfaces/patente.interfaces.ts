@@ -23,4 +23,5 @@ export interface Registro {
     codigo_documento?: string;
     id_docuemnto_per?: string;
     id_producto_per?: string;
+    id_tarea_per?:string
   }
