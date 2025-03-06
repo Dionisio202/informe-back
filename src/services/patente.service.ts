@@ -156,9 +156,11 @@ export const insertProductoDatos = async (
       proyecto: {
         nombre: datosDocumento.proyecto.titulo,
         codigo: datosDocumento.proyecto.resolucion.numero,
+        tipo: datosDocumento.proyecto.tipo,
       },
       memorando,
       tipo: 1,
+      carrera: datosDocumento.proyecto.carrera,
     });
 
     console.log("Datos que se envían al servidor", jsonData);
