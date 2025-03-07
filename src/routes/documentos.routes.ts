@@ -100,9 +100,10 @@ router.get("/verificar-documento", async (req, res) => {
       await fs.promises.copyFile(baseFilePath, newFilePath);
 
       // Insertamos el registro en la base de datos, tal como se realiza en el endpoint POST
+      
       await pool.request()
       .input("id_registro_per", sql.VarChar(50), id_registro_per)
-      .input("codigo_almacenamiento", sql.VarChar(100), key)
+      .input("codigo_almacenamiento", sql.VarChar(100),`${key}.docx`)
       .input("id_tipo_documento", sql.Int, id_tipo_documento)
       .input("id_tarea_per", sql.VarChar(100), id_tarea_per)
       .query(`
@@ -223,7 +224,7 @@ router.post("/get-document", async (req, res) => {
       const documentBuffer = Buffer.from(document, "base64");
 
       // Construir el nuevo nombre del archivo combinando el nombre formateado y la extensión
-      const newFileName = `${nombreFormateado}.pdf`;
+      const newFileName = `${nombreFormateado}`;
       const newFilePath = path.join("/app/documents", newFileName);
 
       // Guardar el documento recibido en el sistema de archivos
