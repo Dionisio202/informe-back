@@ -62,7 +62,7 @@ router.post('/save-document', (req:any, res:any) => {
 
 
 router.get("/verificar-documento", async (req, res) => {
-  const { key, nombre, id_registro_per, id_tipo_documento,id_tarea_per } = req.query;
+  const { key, nombre, id_registro_per, id_tipo_documento, id_tarea_per } = req.query;
 
   if (!key) {
     return res.status(400).json({ error: "El parámetro 'key' es obligatorio" });
@@ -73,56 +73,61 @@ router.get("/verificar-documento", async (req, res) => {
 
   try {
     let pool = await getConnection();
+    // Usamos un nombre consistente para el campo codigo_almacenamiento (agregamos la extensión .docx)
+    const codigoAlmacenamiento = `${key}.docx`;
+
+    // Verificamos si el documento ya existe en la base de datos
     let checkResult = await pool
       .request()
-      .input("codigo_almacenamiento", sql.VarChar(100), key)
+      .input("codigo_almacenamiento", sql.VarChar(100), codigoAlmacenamiento)
       .query("SELECT COUNT(*) AS count FROM Documentos WHERE codigo_almacenamiento = @codigo_almacenamiento");
 
     const documentExists = checkResult.recordset[0].count > 0;
     console.log("🔍 Documento encontrado en la BD:", documentExists);
 
-    if (!documentExists) {
-      // Validamos que se hayan enviado los parámetros necesarios para insertar el documento en la BD
-      if (!id_registro_per || !id_tipo_documento) {
-        return res.status(400).json({ error: "Los parámetros 'id_registro_per' y 'id_tipo_documento' son obligatorios para generar un nuevo documento." });
-      }
+    if (documentExists) {
+      // Si el documento ya existe, retornamos un mensaje sin generar ni insertar nada nuevo
+      return res.status(200).json({ message: "El documento ya existe en la base de datos.", exists: documentExists });
+    }
 
-      // Ruta del documento base (plantilla) y del nuevo documento a generar
-      const baseFilePath = path.join('/app/documents/templates', nombre);
-      const newFilePath = path.join('/app/documents', `${key}.docx`);
+    // Validamos que se hayan enviado los parámetros necesarios para generar un nuevo documento
+    if (!id_registro_per || !id_tipo_documento) {
+      return res.status(400).json({ error: "Los parámetros 'id_registro_per' y 'id_tipo_documento' son obligatorios para generar un nuevo documento." });
+    }
 
-      // Verifica que el documento base exista
-      if (!fs.existsSync(baseFilePath)) {
-        return res.status(404).json({ error: "El documento base no se encontró", baseFile: baseFilePath });
-      }
+    // Ruta del documento base (plantilla) y del nuevo documento a generar
+    const baseFilePath = path.join('/app/documents/templates', nombre);
+    const newFilePath = path.join('/app/documents', codigoAlmacenamiento);
 
-      // Copia el documento base para generar el nuevo documento
-      await fs.promises.copyFile(baseFilePath, newFilePath);
+    // Verifica que el documento base exista
+    if (!fs.existsSync(baseFilePath)) {
+      return res.status(404).json({ error: "El documento base no se encontró", baseFile: baseFilePath });
+    }
 
-      // Insertamos el registro en la base de datos, tal como se realiza en el endpoint POST
-      
-      await pool.request()
+    // Copia el documento base para generar el nuevo documento
+    await fs.promises.copyFile(baseFilePath, newFilePath);
+
+    // Inserta el registro en la base de datos
+    await pool.request()
       .input("id_registro_per", sql.VarChar(50), id_registro_per)
-      .input("codigo_almacenamiento", sql.VarChar(100),`${key}.docx`)
+      .input("codigo_almacenamiento", sql.VarChar(100), codigoAlmacenamiento)
       .input("id_tipo_documento", sql.Int, id_tipo_documento)
       .input("id_tarea_per", sql.VarChar(100), id_tarea_per)
       .query(`
         INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, id_tipo_documento, id_tarea_per, fecha_doc) 
-        VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento,@id_tarea_per,GETDATE())
+        VALUES (@id_registro_per, @codigo_almacenamiento, @id_tipo_documento, @id_tarea_per, GETDATE())
       `);
 
-      return res.status(201).json({ 
-        message: "Documento no encontrado. Se ha generado un nuevo documento basado en la plantilla y se ha almacenado en la BD.",
-        filePath: newFilePath
-      });
-    }
-
-    res.status(200).json({ exists: documentExists });
+    return res.status(201).json({ 
+      message: "Documento generado y almacenado en la base de datos.",
+      filePath: newFilePath
+    });
   } catch (error:any) {
     console.error("❌ Error en la BD:", error.message, error.stack);
     res.status(500).json({ error: "Error al verificar el documento en la BD", details: error.message });
   }
 });
+
 ///POrque hay 2 ?
 router.get("/verificar-documento", async (req, res) => {
   const { key, nombre, id_registro_per, id_tipo_documento ,id_tarea_per} = req.query;
