@@ -9,7 +9,7 @@ const emailEvents = require('./events/email');
 const patenteEvents = require('./events/patente');
 const form4Events = require('./events/form4');
 const express = require('express');
-
+const documentos = require('./events/documentos');
 // Importar Rutas
 import documentosRoutes from './routes/documentos.routes';
 
@@ -59,6 +59,8 @@ io.on('connection', (socket) => {
     emailEvents(io, socket);
     // Registrar eventos de patentes
     patenteEvents(io, socket);
+    // Registrar eventos de documentos
+    documentos(io, socket);
     // Registrar eventos de form4
     //form4Events(io, socket);
     socket.on('disconnect', () => {
