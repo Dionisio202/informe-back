@@ -207,7 +207,16 @@ router.post("/get-document", async (req, res) => {
   }
 
   // Reemplazar espacios en blanco por guiones bajos
-  const nombreFormateado = nombre.replace(/\s+/g, "_");
+  // Extraer la extensión, si existe
+  const ext = path.extname(nombre);
+  // Extraer el nombre base sin la extensión
+  const baseName = path.basename(nombre, ext);
+
+  // Reemplazar espacios, puntos y paréntesis en el nombre base por guiones bajos
+  const transformedBaseName = baseName.replace(/\s+/g, "_").replace(/[.\(\)]/g, "_");
+
+  // Concatenar el nombre transformado con la extensión original
+  const nombreFormateado = transformedBaseName + ext;
 
   try {
     let pool = await getConnection();
