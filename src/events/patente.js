@@ -11,6 +11,8 @@ const {
   saveDocument,
   insertProductoDatos,
   getRegistrosDatos,
+  getFacultadesCarreras,
+  getRolbyname,
 } = require("../services/patente.service");
 const extractMemoCode = require("../utils/codigo_memorando");
 // Variables de entorno
@@ -82,6 +84,8 @@ module.exports = (io, socket) => {
       // Convertir el array de personas a formato JSON para enviarlo al Front
       const jsonAutores = JSON.stringify(autores);
       const jsonProductos = JSON.stringify(productos);
+      // Buscar posible rol de la persona por su nombre
+      const rol = await getRolbyname(productos.solicitante.nombre);
 
       callback({
         success: true,
@@ -394,6 +398,12 @@ module.exports = (io, socket) => {
   //Evento para los datos de productos registrados
   socket.on("datos_registro", async (callback) => {
     const result = await getRegistrosDatos();
+    callback(result);
+  });
+
+  //Evento para obtener las facultades y carreras
+  socket.on("obtener_facultades_carreras", async (callback) => {
+    const result = await getFacultadesCarreras();
     callback(result);
   });
 };

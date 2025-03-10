@@ -339,3 +339,30 @@ JOIN FacultadesCarreras f ON f.ID = per.id_facultad_carrera;
     };
   }
 };
+
+export const getFacultadesCarreras = async () => {
+  try {
+    // Obtener la conexión a la base de datos
+    const pool = await getConnection();
+    // Ejecutar la consulta para obtener las Facultades y Carreras
+    const result = await pool.request().query("EXEC ObtenerFacultadesYCarreras");
+    return { success: true, data: result.recordset };
+  } catch (error) {
+    return { success: false, error: error };
+  }
+};
+
+export const getRolbyname = async (nombre: string) => {
+  try {
+    // Obtener la conexión a la base de datos
+    const pool = await getConnection();
+    // Ejecutar la consulta para obtener las Facultades y Carreras
+    const result = await pool
+      .request()
+      .input("nombre", sql.VarChar, nombre)
+      .query("EXEC ObtenerRolPorNombre @nombre");
+    return { success: true, data: result.recordset };
+  } catch (error) {
+    return { success: false, error: error };
+  }
+}
