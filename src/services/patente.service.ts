@@ -160,7 +160,6 @@ export const insertProductoDatos = async (
       },
       memorando,
       tipo: 1,
-      carrera: datosDocumento.proyecto.carrera,
     });
 
     console.log("Datos que se envían al servidor", jsonData);
@@ -226,7 +225,7 @@ export const saveDocument = async (
     codigo_documento,
     id_tipo_documento,
     codigo_almacenamiento,
-    id_tarea_per
+    id_tarea_per,
   } = documento;
   try {
     const pool = await getConnection();
@@ -248,22 +247,22 @@ export const saveDocument = async (
       };
     }
     // Si no existe, proceder a insertar el nuevo registro
-      await pool
-        .request()
-        .input("id_registro_per", sql.VarChar(50), id_registro)
-        .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
-        .input("codigo_documento", sql.VarChar(100), codigo_documento)
-        .input("id_tipo_documento", sql.Int, id_tipo_documento)
-        .input("id_tarea_per", sql.VarChar(100), id_tarea_per).query(`
+    await pool
+      .request()
+      .input("id_registro_per", sql.VarChar(50), id_registro)
+      .input("codigo_almacenamiento", sql.VarChar(100), codigo_almacenamiento)
+      .input("codigo_documento", sql.VarChar(100), codigo_documento)
+      .input("id_tipo_documento", sql.Int, id_tipo_documento)
+      .input("id_tarea_per", sql.VarChar(100), id_tarea_per).query(`
           INSERT INTO Documentos (id_registro_per, codigo_almacenamiento, codigo_documento, id_tipo_documento,id_tarea_per, fecha_doc) 
           VALUES (@id_registro_per, @codigo_almacenamiento, @codigo_documento, @id_tipo_documento,@id_tarea_per, GETDATE())
         `);
 
-      console.log("✅ Datos insertados en la base de datos");
-      return {
-        success: true,
-        message: "Documento guardado e información insertada en la BD",
-      };
+    console.log("✅ Datos insertados en la base de datos");
+    return {
+      success: true,
+      message: "Documento guardado e información insertada en la BD",
+    };
   } catch (dbError) {
     console.error(dbError);
     return { success: false, message: "Error al guardar los datos en la BD" };
@@ -304,38 +303,39 @@ export const updateDocument = async (
 export const getRegistrosDatos = async (): Promise<{
   success: boolean;
   message: string;
-  data: any[]
+  data: any[];
 }> => {
   try {
     const pool = await getConnection();
 
     const result = await pool.request().query(`
-      SELECT 
-        p.nombre AS nombre_producto,
-        r.fecha_registro,
-        r.fecha_finalizacion,
-        r.estado,
-        r.estado_proceso,
-        a.institucion_representa AS facultad, 
-        r.id_registro
-      FROM Registros r
-      JOIN Productos p ON p.id_registro_per = r.id_registro
-      JOIN Autoridades a ON a.id_persona_autoridad = r.id_funcionario;
-    `);
+SELECT 
+    p.nombre AS nombre_producto,
+    r.fecha_registro,
+    r.fecha_finalizacion,
+    r.estado,
+    r.estado_proceso,
+    f.Nombre AS facultad, 
+    r.id_registro
+FROM Registros r
+JOIN Productos p ON p.id_registro_per = r.id_registro
+JOIN Personas per ON per.id_persona = r.id_funcionario
+JOIN FacultadesCarreras f ON f.ID = per.id_facultad_carrera;
+`);
 
     console.log("✅ Datos Extraidos con Exito");
 
     return {
       success: true,
       message: "Datos Extraidos con Exito",
-      data: result.recordset
+      data: result.recordset,
     };
   } catch (dbError) {
     console.error(dbError);
     return {
       success: false,
       message: "Error al extraer datos",
-      data: []
+      data: [],
     };
   }
 };

@@ -10,14 +10,16 @@ async function getFileType(buffer) {
   return fileTypeModule.fileTypeFromBuffer(buffer);
 }
 
-// Valores por defecto para los campos
+// Valores por defecto actualizados con los nuevos campos
 const valoresPorDefecto = {
   identificacion: "No especificado",
   nombre: "No especificado",
   telefono: "No especificado",
-  fecha_nacimiento: null, // Se enviará `null` si no se puede convertir
+  fecha_nacimiento: null,
   direccion: "No especificado",
   correo: "No especificado",
+  facultad: "No especificado",
+  carrera: "No especificado",
   porcentaje_participacion: 100,
 };
 
@@ -37,25 +39,10 @@ function validarCorreo(correo) {
 // Función para normalizar correos electrónicos
 function normalizarCorreo(correo) {
   if (!correo || typeof correo !== "string") {
-    return null; // Si no es un string válido, devuelve null
-  }
-
-  // Eliminar espacios al principio y al final
-  correo = correo.trim();
-
-  // Eliminar espacios adicionales entre caracteres
-  correo = correo.replace(/\s+/g, "");
-
-  // Convertir a minúsculas para uniformidad
-  correo = correo.toLowerCase();
-
-  // Validar el correo
-  if (!validarCorreo(correo)) {
-    console.warn(`⚠️ Correo no válido: ${correo}`);
     return null;
   }
-
-  return correo;
+  correo = correo.trim().replace(/\s+/g, "").toLowerCase();
+  return validarCorreo(correo) ? correo : null;
 }
 
 // Función para extraer datos del texto
@@ -63,8 +50,9 @@ function extraerDatos(text) {
   const textoProcesado = text.replace(/\n+/g, "\n");
   const lineas = textoProcesado.split("\n");
 
+  // Actualizado con los nuevos campos
   const lineasFiltradas = lineas.filter((linea) => {
-    return /^(Número de Cédula|Nombres Completos|Número telefónico|Fecha de Nacimiento|Dirección Domiciliaria|Correo Electrónico|Porcentaje de participación):/.test(
+    return /^(Número de Cédula|Nombres Completos|Número telefónico|Fecha de Nacimiento|Dirección Domiciliaria|Correo Electrónico|Facultad|Carrera|Porcentaje de participación):/.test(
       linea
     );
   });
@@ -75,6 +63,7 @@ function extraerDatos(text) {
   lineasFiltradas.forEach((linea) => {
     const [clave, valor] = linea.split(":").map((part) => part.trim());
 
+    // Lógica para detectar nuevo registro
     if (
       clave === "Número de Cédula" &&
       personaActual["identificacion"] !== "No especificado"
@@ -89,6 +78,7 @@ function extraerDatos(text) {
       personaActual = { ...valoresPorDefecto };
     }
 
+    // Mapeo actualizado con nuevos campos
     const mapeoCampos = {
       "Número de Cédula": "identificacion",
       "Nombres Completos": "nombre",
@@ -96,6 +86,8 @@ function extraerDatos(text) {
       "Fecha de Nacimiento": "fecha_nacimiento",
       "Dirección Domiciliaria": "direccion",
       "Correo Electrónico": "correo",
+      "Facultad": "facultad",        // Nuevo mapeo
+      "Carrera": "carrera",          // Nuevo mapeo
       "Porcentaje de participación": "porcentaje_participacion",
     };
 
@@ -103,18 +95,18 @@ function extraerDatos(text) {
       if (clave === "Fecha de Nacimiento") {
         personaActual[mapeoCampos[clave]] = normalizarFecha(valor);
       } else if (clave === "Porcentaje de participación") {
-        // Convertir porcentaje a número, asegurando que sea un decimal válido
         let porcentaje = parseFloat(valor.replace("%", "").trim());
         personaActual[mapeoCampos[clave]] = isNaN(porcentaje) ? 100.00 : porcentaje;
       } else if (clave === "Correo Electrónico") {
-        personaActual[mapeoCampos[clave]] = normalizarCorreo(valor); // Normalizar y validar correo
+        personaActual[mapeoCampos[clave]] = normalizarCorreo(valor);
       } else {
+        // Para los nuevos campos (Facultad y Carrera)
         personaActual[mapeoCampos[clave]] = valor;
       }
     }
-
   });
 
+  // Añadir última persona procesada
   if (personaActual["identificacion"] !== "No especificado") {
     if (!existeDuplicado(personas, personaActual)) {
       personas.push(personaActual);
