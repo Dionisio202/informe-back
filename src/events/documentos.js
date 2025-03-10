@@ -9,8 +9,17 @@ module.exports = (io, socket) => {
     try {
       const pool = await getConnection();
       const registrosResult = await pool.request().query(`
-        SELECT id_registro, fecha_registro
-        FROM [onlyoffice].[dbo].[Registros]
+            SELECT 
+            r.id_registro,
+            r.fecha_registro,
+            p.name AS nombre_registro,
+            u.Nombre AS funcionario_registro
+        FROM [onlyoffice].[dbo].[Registros] r
+        INNER JOIN [onlyoffice].[dbo].[Procesos] p 
+            ON r.id_proceso = p.id
+        INNER JOIN [onlyoffice].[dbo].[Usuarios] u 
+            ON r.id_funcionario = u.Id;
+
       `);
       const registros = registrosResult.recordset;
   
