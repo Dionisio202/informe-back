@@ -352,7 +352,7 @@ export const getFacultadesCarreras = async () => {
   }
 };
 
-export const getRolbyname = async (nombre: string) => {
+export const getRolFacultadCarrerabyname = async (nombre: string) => {
   try {
     // Obtener la conexión a la base de datos
     const pool = await getConnection();
@@ -360,9 +360,21 @@ export const getRolbyname = async (nombre: string) => {
     const result = await pool
       .request()
       .input("nombre", sql.VarChar, nombre)
-      .query("EXEC ObtenerRolPorNombre @nombre");
+      .query("EXEC ObtenerRolFacultadCarreraPorNombre @nombre");
     return { success: true, data: result.recordset };
   } catch (error) {
     return { success: false, error: error };
   }
 }
+
+export const getRoles = async () => {
+  try {
+    // Obtener la conexión a la base de datos
+    const pool = await getConnection();
+    // Ejecutar la consulta para obtener los roles
+    const result = await pool.request().query("SELECT * FROM RolPersona");
+    return { success: true, data: result.recordset };
+  } catch (error) {
+    return { success: false, error: error };
+  }
+};

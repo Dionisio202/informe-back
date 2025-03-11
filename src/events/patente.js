@@ -12,7 +12,8 @@ const {
   insertProductoDatos,
   getRegistrosDatos,
   getFacultadesCarreras,
-  getRolbyname,
+  getRolFacultadCarrerabyname,
+  getRoles,
 } = require("../services/patente.service");
 const extractMemoCode = require("../utils/codigo_memorando");
 // Variables de entorno
@@ -80,14 +81,14 @@ module.exports = (io, socket) => {
           message: "No se encontraron datos válidos en el documento",
         });
       }
-
+      // Buscar posible rol de la persona por su nombre
+      const rol = await getRolFacultadCarrerabyname(productos.solicitante.nombre);
+      // Insertar el rol en el objeto de la persona
+      productos.solicitante.rol= rol.data[0].id_rol;
+      productos.solicitante.facultad= rol.data[0].id_facultad;
       // Convertir el array de personas a formato JSON para enviarlo al Front
       const jsonAutores = JSON.stringify(autores);
       const jsonProductos = JSON.stringify(productos);
-      // Buscar posible rol de la persona por su nombre
-      const rol = await getRolbyname(productos.solicitante.nombre);
-      // Insertar el rol en el objeto de la persona
-      productos.solicitante.rol = rol;
       callback({
         success: true,
         message: "Datos procesados correctamente",
@@ -405,6 +406,12 @@ module.exports = (io, socket) => {
   //Evento para obtener las facultades y carreras
   socket.on("obtener_facultades_carreras", async (callback) => {
     const result = await getFacultadesCarreras();
+    callback(result);
+  });
+
+  //Evento para obtener los todos roles de las personas
+  socket.on("obtener_rol", async (callback) => {
+    const result = await getRoles();
     callback(result);
   });
 };
