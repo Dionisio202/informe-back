@@ -317,7 +317,9 @@ module.exports = (io, socket) => {
       jsonDataCCDP.fecha = JSON.parse(jsonDataCCDP.fecha);
       //Rector
       jsonDataCCDP.rector = JSON.parse(jsonDataCCDP.rector);
-
+      //Autoridad
+      jsonDataCCDP.autoridad = JSON.parse(jsonDataCCDP.autoridad);
+      
       // Generar los documentos
       generarActaPP(jsonDataAPP, outputFileNameAPP);
       generarContrato(jsonDataCCDP, outputFileNameCCDP);

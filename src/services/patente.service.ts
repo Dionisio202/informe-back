@@ -154,9 +154,7 @@ console.log("datosDocumento",datosDocumento);
     await pool
       .request()
       .input("json", sql.NVarChar, jsonData)
-      .query(`EXEC InsertarRegistroConDatos @json`);
-
-    console.log("Datos procesados correctamente");
+      .query(`EXEC DecidirOperacionRegistro @json`);
     return { success: true, message: "Datos procesados correctamente" };
   } catch (err) {
     console.error("Error al procesar los datos:", err);
