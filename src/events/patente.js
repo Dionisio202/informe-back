@@ -86,7 +86,8 @@ module.exports = (io, socket) => {
       const jsonProductos = JSON.stringify(productos);
       // Buscar posible rol de la persona por su nombre
       const rol = await getRolbyname(productos.solicitante.nombre);
-
+      // Insertar el rol en el objeto de la persona
+      productos.solicitante.rol = rol;
       callback({
         success: true,
         message: "Datos procesados correctamente",
