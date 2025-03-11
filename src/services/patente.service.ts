@@ -23,7 +23,6 @@ export const getTiposProductos = async () => {
     const pool = await getConnection();
     // Ejecutar la consulta para obtener las autoridades
     const result = await pool.request().query("SELECT * FROM Tipos_Productos");
-    console.log("result", result.recordset);
     return { success: true, data: result.recordset };
   } catch (error) {
     return { success: false, error: error };
@@ -121,21 +120,7 @@ export const insertProductoDatos = async (
       typeof jsonProductos === "string"
         ? JSON.parse(jsonProductos)
         : jsonProductos;
-
-    // Agregar la propiedad "tipo" a cada producto usando el valor de datosDocumento.tipo
-    if (
-      datosDocumento &&
-      Array.isArray(datosDocumento.productos) &&
-      datosDocumento.tipo !== undefined
-    ) {
-      datosDocumento.productos = datosDocumento.productos.map(
-        (producto: any) => ({
-          ...producto,
-          tipo: datosDocumento.tipo,
-        })
-      );
-    }
-
+console.log("datosDocumento",datosDocumento);
     // Asegurarse de que "productos" sea un objeto (si llegara a ser string, se parsea)
     const productos =
       typeof datosDocumento.productos === "string"
@@ -143,6 +128,9 @@ export const insertProductoDatos = async (
         : datosDocumento.productos;
     //Obtener un solo producto
     let producto = await obtenerSiguienteProducto(memorando, productos);
+    if (!producto) {
+      return { success: false, message: "Ya se registraron todos los productos" };
+    }
     producto.tipo = datosDocumento.tipo;
     // Construir el objeto final que se enviará al SP
     const jsonData = JSON.stringify({
@@ -150,7 +138,7 @@ export const insertProductoDatos = async (
       productos: [producto],
       autoridad: {
         nombre: datosDocumento.solicitante.nombre,
-        Rol: datosDocumento.solicitante.cargo,
+        Rol: datosDocumento.solicitante.rol,
         facultad: datosDocumento.solicitante.facultad,
       },
       proyecto: {
@@ -161,8 +149,6 @@ export const insertProductoDatos = async (
       memorando,
       tipo: 1,
     });
-
-    console.log("Datos que se envían al servidor", jsonData);
 
     const pool = await getConnection();
     await pool
@@ -206,12 +192,10 @@ const obtenerSiguienteProducto = async (
       (producto) => !productosRegistrados.includes(producto.nombre)
     );
     if (!productoNuevo) {
-      console.log("Todos los productos ya han sido registrados");
       return null;
     }
     return productoNuevo;
   } catch (err) {
-    console.error("Error al obtener el siguiente producto:", err);
     return null;
   }
 };
@@ -378,3 +362,18 @@ export const getRoles = async () => {
     return { success: false, error: error };
   }
 };
+
+export const getProductobyRegistro = async (id_registro: string) => {
+  try {
+    // Obtener la conexión a la base de datos
+    const pool = await getConnection();
+    // Ejecutar la consulta para obtener los roles
+    const result = await pool
+      .request()
+      .input("id_registro", sql.VarChar, id_registro)
+      .query("EXEC ObtenerProductosPorRegistro @id_registro");
+    return { success: true, data: result.recordset };
+  } catch (error) {
+    return { success: false, error: error };
+  }
+}
