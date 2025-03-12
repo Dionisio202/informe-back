@@ -5,6 +5,7 @@ import {
   ProductoDatos,
   Documento,
 } from "../interfaces/patente.interfaces";
+import { DatabaseResponse } from "../interfaces/database.interfaces";
 // Obtener Autoridades
 export const getAutoridades = async () => {
   try {
@@ -73,9 +74,6 @@ export const insertRegistro = async (
     if (!id_funcionario) {
       return { success: false, message: "El id_funcionario es obligatorio" };
     }
-    console.log("id_registro", id_registro);
-    console.log("id_funcionario", id_funcionario);
-    console.log("id_proceso", id_proceso);
     const pool = await getConnection();
 
     await pool
@@ -120,7 +118,6 @@ export const insertProductoDatos = async (
       typeof jsonProductos === "string"
         ? JSON.parse(jsonProductos)
         : jsonProductos;
-console.log("datosDocumento",datosDocumento);
     // Asegurarse de que "productos" sea un objeto (si llegara a ser string, se parsea)
     const productos =
       typeof datosDocumento.productos === "string"
@@ -129,7 +126,10 @@ console.log("datosDocumento",datosDocumento);
     //Obtener un solo producto
     let producto = await obtenerSiguienteProducto(memorando, productos);
     if (!producto) {
-      return { success: false, message: "Ya se registraron todos los productos" };
+      return {
+        success: false,
+        message: "Ya se registraron todos los productos",
+      };
     }
     producto.tipo = datosDocumento.tipo;
     // Construir el objeto final que se enviará al SP
@@ -162,6 +162,7 @@ console.log("datosDocumento",datosDocumento);
   }
 };
 
+//Precedimiento Temporal
 const obtenerSiguienteProducto = async (
   memorando: string,
   productos: any[]
@@ -195,6 +196,42 @@ const obtenerSiguienteProducto = async (
     return productoNuevo;
   } catch (err) {
     return null;
+  }
+};
+
+export const obtenerProductosConIndicador = async (
+  memorando: string,
+  productos: any[]
+): Promise<any[]> => {
+  try {
+    if (!memorando || !productos || productos.length === 0) {
+      return [];
+    }
+
+    const pool = await getConnection();
+
+    // Obtener los productos ya registrados con ese memorando
+    const result = await pool
+      .request()
+      .input("memorando", sql.NVarChar, memorando).query(`
+        SELECT DISTINCT p.nombre 
+        FROM Productos p
+        JOIN Documentos d ON p.id_registro_per = d.id_registro_per
+        WHERE d.codigo_documento = @memorando
+      `);
+
+    const productosRegistrados = result.recordset.map((row: any) => row.nombre);
+
+    // Recorrer todos los productos y marcar si ya están insertados
+    const productosConIndicador = productos.map((producto: any) => ({
+      ...producto,
+      inserted: productosRegistrados.includes(producto.nombre),
+    }));
+
+    return productosConIndicador;
+  } catch (err) {
+    console.error("Error al obtener productos con indicador:", err);
+    return [];
   }
 };
 
@@ -291,22 +328,18 @@ export const getRegistrosDatos = async (): Promise<{
     const pool = await getConnection();
 
     const result = await pool.request().query(`
-SELECT 
-    p.nombre AS nombre_producto,
-    r.fecha_registro,
-    r.fecha_finalizacion,
-    r.estado,
-    r.estado_proceso,
-    f.Nombre AS facultad, 
-    r.id_registro
-FROM Registros r
-JOIN Productos p ON p.id_registro_per = r.id_registro
-JOIN Personas per ON per.id_persona = r.id_funcionario
-JOIN FacultadesCarreras f ON f.ID = per.id_facultad_carrera;
-`);
-
-    console.log("✅ Datos Extraidos con Exito");
-
+      SELECT 
+          p.nombre AS nombre_producto,
+          r.fecha_registro,
+          r.fecha_finalizacion,
+          r.estado,
+          r.estado_proceso,
+          f.Nombre AS facultad, 
+          r.id_registro
+      FROM Registros r
+      JOIN Productos p ON p.id_registro_per = r.id_registro
+      JOIN Personas per ON per.id_persona = r.id_funcionario
+      JOIN FacultadesCarreras f ON f.ID = per.id_facultad_carrera;`);
     return {
       success: true,
       message: "Datos Extraidos con Exito",
@@ -327,7 +360,9 @@ export const getFacultadesCarreras = async () => {
     // Obtener la conexión a la base de datos
     const pool = await getConnection();
     // Ejecutar la consulta para obtener las Facultades y Carreras
-    const result = await pool.request().query("EXEC ObtenerFacultadesYCarreras");
+    const result = await pool
+      .request()
+      .query("EXEC ObtenerFacultadesYCarreras");
     return { success: true, data: result.recordset };
   } catch (error) {
     return { success: false, error: error };
@@ -347,7 +382,7 @@ export const getRolFacultadCarrerabyname = async (nombre: string) => {
   } catch (error) {
     return { success: false, error: error };
   }
-}
+};
 
 export const getRoles = async () => {
   try {
@@ -374,4 +409,53 @@ export const getProductobyRegistro = async (id_registro: string) => {
   } catch (error) {
     return { success: false, error: error };
   }
-}
+};
+
+export const getTiposProyecto = async () => {
+  try {
+    // Obtener la conexión a la base de datos
+    const pool = await getConnection();
+    // Ejecutar la consulta para obtener los tipos de proyectos
+    const result = await pool.request().query("SELECT * FROM TipoProyectos");
+    return { success: true, data: result.recordset };
+  } catch (error) {
+    return { success: false, error: error };
+  }
+};
+
+export const getRegistroData = async (id_registro: string) => {
+  try {
+    // Obtener la conexión a la base de datos
+    const pool = await getConnection();
+    // Ejecutar la consulta para obtener los datos del registro
+    const result = await pool
+      .request()
+      .input("id_registro", sql.VarChar, id_registro)
+      .query("EXEC ObtenerDatosRegistro @id_registro");
+    return { success: true, data: result.recordset };
+  } catch (error) {
+    return { success: false, error: error };
+  }
+};
+
+export const getRegistroEnCurso = async (id_registro: string): Promise<DatabaseResponse<boolean>> => {
+  try {
+    // Obtener la conexión a la base de datos
+    const pool = await getConnection();
+    // Ejecutar la consulta para obtener el estado del registro
+    const result = await pool
+      .request()
+      .input("id_registro", sql.VarChar, id_registro)
+      .query(`
+        SELECT CASE 
+          WHEN EXISTS (SELECT 1 FROM Productos WHERE id_registro_per = @id_registro)
+          THEN 'true'
+          ELSE 'false'
+        END AS en_curso
+      `);
+    const en_curso = result.recordset[0]?.en_curso === 'true';
+    return { success: true, data: en_curso, message: "Consulta ejecutada correctamente" };
+  } catch (error) {
+    return { success: false, error: error, message: "Error en la consulta" };
+  }
+};

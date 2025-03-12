@@ -14,7 +14,9 @@ const {
   getFacultadesCarreras,
   getRolFacultadCarrerabyname,
   getRoles,
+  obtenerProductosConIndicador
 } = require("../services/patente.service");
+const getAutoresByRegistro = require("../services/persona.service");
 const extractMemoCode = require("../utils/codigo_memorando");
 // Variables de entorno
 require("dotenv").config();
@@ -87,6 +89,7 @@ module.exports = (io, socket) => {
       productos.solicitante.rol= rol.data[0].id_rol;
       productos.solicitante.facultad= rol.data[0].id_facultad;
       // Convertir el array de personas a formato JSON para enviarlo al Front
+      console.log("Productos procesados correctamente:", productos);
       const jsonAutores = JSON.stringify(autores);
       const jsonProductos = JSON.stringify(productos);
       callback({
@@ -414,6 +417,13 @@ module.exports = (io, socket) => {
   //Evento para obtener los todos roles de las personas
   socket.on("obtener_rol", async (callback) => {
     const result = await getRoles();
+    callback(result);
+  });
+  
+  //Evento para obtener los autores de un registro
+  socket.on("obtener_autores", async (data, callback) => {
+    const {id_registro} = data;
+    const result = await getAutoresByRegistro(id_registro);
     callback(result);
   });
 };
