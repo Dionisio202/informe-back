@@ -446,7 +446,7 @@ module.exports = (io, socket) => {
       callback({
         success: true,
         message: "Datos procesados correctamente",
-        autores: jsonAutores,
+        data: jsonAutores,
       });
     } catch (err) {
       console.error("Error al cargar el documento:", err);

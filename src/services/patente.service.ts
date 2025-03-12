@@ -204,34 +204,28 @@ export const obtenerProductosConIndicador = async (
   productos: any[]
 ): Promise<any[]> => {
   try {
-    if (!memorando || !productos || productos.length === 0) {
-      return [];
-    }
+    if (!memorando || !productos?.length) return [];
 
     const pool = await getConnection();
-
-    // Obtener los productos ya registrados con ese memorando
     const result = await pool
-    .request()
-    .input("memorando", sql.NVarChar, memorando).query(`
-      SELECT DISTINCT p.nombre 
-      FROM Productos p
-      INNER JOIN Registros r ON p.id_registro_per = r.id_registro
-      INNER JOIN Documentos d ON r.id_registro = d.id_registro_per
-      WHERE d.codigo_documento = @memorando
-    `);
+      .request()
+      .input("memorando", sql.NVarChar, memorando)
+      .execute("ObtenerProductosConIndicador");
 
-    const productosRegistrados = result.recordset.map((row: any) => row.nombre);
+    const productosRegistrados = result.recordset;
 
-    // Recorrer todos los productos y marcar si ya están insertados
-    const productosConIndicador = productos.map((producto: any) => ({
-      ...producto,
-      inserted: productosRegistrados.includes(producto.nombre),
-    }));
-
-    return productosConIndicador;
+    // Combinar con la lista original y asignar indicador 0 a los no registrados
+    return productos.map((producto) => {
+      const encontrado = productosRegistrados.find(
+        (pr:any) => pr.nombre === producto.nombre
+      );
+      return {
+        ...producto,
+        indicador: encontrado ? encontrado.indicador : 0, // 0 si no existe
+      };
+    });
   } catch (err) {
-    console.error("Error al obtener productos con indicador:", err);
+    console.error("Error al obtener productos:", err);
     return [];
   }
 };
