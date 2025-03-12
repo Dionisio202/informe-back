@@ -212,13 +212,14 @@ export const obtenerProductosConIndicador = async (
 
     // Obtener los productos ya registrados con ese memorando
     const result = await pool
-      .request()
-      .input("memorando", sql.NVarChar, memorando).query(`
-        SELECT DISTINCT p.nombre 
-        FROM Productos p
-        JOIN Documentos d ON p.id_registro_per = d.id_registro_per
-        WHERE d.codigo_documento = @memorando
-      `);
+    .request()
+    .input("memorando", sql.NVarChar, memorando).query(`
+      SELECT DISTINCT p.nombre 
+      FROM Productos p
+      INNER JOIN Registros r ON p.id_registro_per = r.id_registro
+      INNER JOIN Documentos d ON r.id_registro = d.id_registro_per
+      WHERE d.codigo_documento = @memorando
+    `);
 
     const productosRegistrados = result.recordset.map((row: any) => row.nombre);
 
