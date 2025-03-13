@@ -6,6 +6,7 @@ import {
   Documento,
 } from "../interfaces/patente.interfaces";
 import { DatabaseResponse } from "../interfaces/database.interfaces";
+const {similarityPercentage} = require("../utils/levenshtein.js");
 // Obtener Autoridades
 export const getAutoridades = async () => {
   try {
@@ -358,26 +359,31 @@ export const getFacultadesCarreras = async () => {
     const result = await pool
       .request()
       .query("EXEC ObtenerFacultadesYCarreras");
+    return { success: true, data: result.recordset[0].ResultadoJSON };
+  } catch (error) {
+    return { success: false, error: error };
+  }
+};
+
+export const getRolFacultadCarrerabyname = async (nombres: string[]) => {
+  try {
+    const pool = await getConnection();
+
+    // Convertir el array de nombres en JSON
+    const jsonNombres = JSON.stringify({ nombres });
+
+    // Ejecutar el procedimiento almacenado
+    const result = await pool
+      .request()
+      .input("jsonNombres", sql.NVarChar, jsonNombres)
+      .execute("ObtenerRolFacultadCarreraPorNombre");
+
     return { success: true, data: result.recordset };
   } catch (error) {
     return { success: false, error: error };
   }
 };
 
-export const getRolFacultadCarrerabyname = async (nombre: string) => {
-  try {
-    // Obtener la conexión a la base de datos
-    const pool = await getConnection();
-    // Ejecutar la consulta para obtener las Facultades y Carreras
-    const result = await pool
-      .request()
-      .input("nombre", sql.VarChar, nombre)
-      .query("EXEC ObtenerRolFacultadCarreraPorNombre @nombre");
-    return { success: true, data: result.recordset };
-  } catch (error) {
-    return { success: false, error: error };
-  }
-};
 
 export const getRoles = async () => {
   try {
@@ -452,5 +458,46 @@ export const getRegistroEnCurso = async (id_registro: string): Promise<DatabaseR
     return { success: true, data: en_curso, message: "Consulta ejecutada correctamente" };
   } catch (error) {
     return { success: false, error: error, message: "Error en la consulta" };
+  }
+};
+
+// Función que, para cada nombre de facultad en el arreglo, retorna la(s) facultad(es) coincidentes
+const getFacultadesCarrerasbyNombreFacultad = async (nombres: string[]) => {
+  try {
+    const carrerasResponse = await getFacultadesCarreras();
+    if (!carrerasResponse.success) {
+      throw new Error("Error al obtener facultades y carreras");
+    }
+
+    let carrerasData: any;
+    // Verificar si la respuesta contiene un único registro con 'ResultadoJSON'
+    if (
+      carrerasResponse.data.length === 1 &&
+      carrerasResponse.data[0].ResultadoJSON
+    ) {
+      carrerasData = JSON.parse(carrerasResponse.data[0].ResultadoJSON);
+    } else {
+      carrerasData = carrerasResponse.data;
+    }
+
+    // Ajusta el umbral de similitud según tus necesidades (por ejemplo, 80%)
+    const umbral = 80;
+
+    // Para cada nombre enviado, buscar las facultades que cumplan el criterio
+    const resultados = nombres.map((nombre) => {
+      // Se obtienen todas las facultades que superen el umbral de similitud
+      const facultadesCoincidentes = carrerasData.filter((facultad: any) => {
+        const porcentaje = similarityPercentage(
+          nombre,
+          facultad.nombre_facultad // Asegúrate de que este campo coincide con el de tu BD
+        );
+        return porcentaje >= umbral;
+      });
+      return { nombreBuscado: nombre, facultades: facultadesCoincidentes };
+    });
+
+    return { success: true, data: resultados };
+  } catch (error: any) {
+    return { success: false, error: error.message || error };
   }
 };
