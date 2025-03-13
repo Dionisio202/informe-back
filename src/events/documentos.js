@@ -12,38 +12,41 @@ module.exports = (io, socket) => {
       // Obtener todos los registros con sus facultades y carreras
       const registrosResult = await pool.request().query(`
    SELECT
-          r.id_registro AS id,
-          SUBSTRING(r.id_registro, CHARINDEX('-', r.id_registro) + 1, LEN(r.id_registro)) AS numero,
-          r.fecha_registro AS fechaInicio,
-          r.fecha_finalizacion AS fechaFin,
-          r.estado AS progreso,
-          r.estado_proceso AS estado,
-          p.name AS nombre_registro,
-          u.Nombre AS funcionario,
-          pro.nombre AS nombre,
-          tpro.nombre AS tipoProducto,
-          proyectos.tipo AS tipoProyecto,
-          fcFac.abreviatura AS facultad,
-          fcCar.nombre AS carrera
-        FROM [onlyoffice].[dbo].[Registros] r
-        INNER JOIN [onlyoffice].[dbo].[Procesos] p 
-          ON r.id_proceso = p.id
-        INNER JOIN [onlyoffice].[dbo].[Usuarios] u 
-          ON r.id_funcionario = u.Id
-        INNER JOIN [onlyoffice].[dbo].[Productos] pro
-          ON r.id_registro = pro.id_registro_per
-        INNER JOIN [onlyoffice].[dbo].[Tipos_productos] tpro
-          ON pro.id_tipo = tpro.id_tipo_producto
-        INNER JOIN [onlyoffice].[dbo].[Proyectos] proyectos
-          ON r.id_proyecto = proyectos.id_proyecto
-        INNER JOIN [onlyoffice].[dbo].[Detalle_autor_producto] daup
-          ON pro.id_producto = daup.id_producto
-        INNER JOIN [onlyoffice].[dbo].[Personas] per
-          ON daup.id_autor = per.id_persona
-        INNER JOIN [onlyoffice].[dbo].[FacultadesCarreras] fcCar
-          ON per.id_facultad_carrera = fcCar.ID
-        LEFT JOIN [onlyoffice].[dbo].[FacultadesCarreras] fcFac
-          ON fcCar.id_padre = fcFac.ID
+  r.id_registro AS id,
+  SUBSTRING(r.id_registro, CHARINDEX('-', r.id_registro) + 1, LEN(r.id_registro)) AS numero,
+  r.fecha_registro AS fechaInicio,
+  r.fecha_finalizacion AS fechaFin,
+  r.estado AS progreso,
+  r.estado_proceso AS estado,
+  p.name AS nombre_registro,
+  u.Nombre AS funcionario,
+  pro.nombre AS nombre,
+  tpro.nombre AS tipoProducto,
+  tp.nombre AS tipoProyecto,  -- Fixed: Get type name from TipoProyectos
+  fcFac.abreviatura AS facultad,
+  fcCar.nombre AS carrera
+FROM [onlyoffice].[dbo].[Registros] r
+INNER JOIN [onlyoffice].[dbo].[Procesos] p 
+  ON r.id_proceso = p.id
+INNER JOIN [onlyoffice].[dbo].[Usuarios] u 
+  ON r.id_funcionario = u.Id
+INNER JOIN [onlyoffice].[dbo].[Productos] pro
+  ON r.id_registro = pro.id_registro_per
+INNER JOIN [onlyoffice].[dbo].[Tipos_productos] tpro
+  ON pro.id_tipo = tpro.id_tipo_producto
+INNER JOIN [onlyoffice].[dbo].[Proyectos] proyectos
+  ON r.id_proyecto = proyectos.id_proyecto
+-- Added join to get project type name
+INNER JOIN [onlyoffice].[dbo].[TipoProyectos] tp  
+  ON proyectos.id_tipo = tp.id  -- Link via id_tipo
+INNER JOIN [onlyoffice].[dbo].[Detalle_autor_producto] daup
+  ON pro.id_producto = daup.id_producto
+INNER JOIN [onlyoffice].[dbo].[Personas] per
+  ON daup.id_autor = per.id_persona
+INNER JOIN [onlyoffice].[dbo].[FacultadesCarreras] fcCar
+  ON per.id_facultad_carrera = fcCar.ID
+LEFT JOIN [onlyoffice].[dbo].[FacultadesCarreras] fcFac
+  ON fcCar.id_padre = fcFac.ID;
       `);
       
       // Agrupar los resultados por ID de registro
