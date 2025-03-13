@@ -14,7 +14,8 @@ const {
   getFacultadesCarreras,
   getRolFacultadCarrerabyname,
   getRoles,
-  obtenerProductosConIndicador
+  obtenerProductosConIndicador,
+  getRegistroEnCurso,
 } = require("../services/patente.service");
 const getAutoresByRegistro = require("../services/persona.service");
 const extractMemoCode = require("../utils/codigo_memorando");
@@ -72,8 +73,6 @@ module.exports = (io, socket) => {
 
   // Evento de procesamiento de doeumentos y extracción de datos de productos y autores para previsualización en el Front
   socket.on("procesar_documentos", async (data, callback) => {
-
-
     const { documento_autores, documento_productos } = data;
     try {
       // Procesar el documento de autores y obtener la lista de autores en formato JSON
@@ -87,10 +86,12 @@ module.exports = (io, socket) => {
         });
       }
       // Buscar posible rol de la persona por su nombre
-      const rol = await getRolFacultadCarrerabyname(productos.solicitante.nombre);
+      const rol = await getRolFacultadCarrerabyname(
+        productos.solicitante.nombre
+      );
       // Insertar el rol en el objeto de la persona
-      productos.solicitante.rol= rol.data[0].id_rol;
-      productos.solicitante.facultad= rol.data[0].id_facultad;
+      productos.solicitante.rol = rol.data[0].id_rol;
+      productos.solicitante.facultad = rol.data[0].id_facultad;
       // Convertir el array de personas a formato JSON para enviarlo al Front
       console.log("Productos procesados correctamente:", productos);
       const jsonAutores = JSON.stringify(autores);
@@ -325,7 +326,7 @@ module.exports = (io, socket) => {
       jsonDataCCDP.rector = JSON.parse(jsonDataCCDP.rector);
       //Autoridad
       jsonDataCCDP.autoridad = JSON.parse(jsonDataCCDP.autoridad);
-      
+
       // Generar los documentos
       generarActaPP(jsonDataAPP, outputFileNameAPP);
       generarContrato(jsonDataCCDP, outputFileNameCCDP);
@@ -335,14 +336,14 @@ module.exports = (io, socket) => {
         codigo_almacenamiento: outputFileNameCCDP,
         id_tipo_documento: "7",
         codigo_documento: "CCDP-" + id_combinado,
-        id_tarea_per:id_combinado
+        id_tarea_per: id_combinado,
       });
       await saveDocument({
         id_registro: id_registro,
         codigo_almacenamiento: outputFileNameAPP,
         id_tipo_documento: "8",
         codigo_documento: "APP-" + id_combinado,
-        id_tarea_per:id_combinado
+        id_tarea_per: id_combinado,
       });
       // Enviar respuesta de éxito al cliente
       callback({
@@ -422,10 +423,10 @@ module.exports = (io, socket) => {
     const result = await getRoles();
     callback(result);
   });
-  
+
   //Evento para obtener los autores de un registro
   socket.on("obtener_autores", async (data, callback) => {
-    const {id_registro} = data;
+    const { id_registro } = data;
     const result = await getAutoresByRegistro(id_registro);
     callback(result);
   });
@@ -433,7 +434,7 @@ module.exports = (io, socket) => {
   socket.on("cargar_documento_autores", async (data, callback) => {
     try {
       const { documento_autores } = data;
-  
+
       // Procesar archivo para obtener los autores
       const autores = await procesarArchivoAutores(documento_autores);
       if (autores.length === 0) {
@@ -442,20 +443,26 @@ module.exports = (io, socket) => {
           message: "No se encontraron datos válidos en el documento",
         });
       }
-  
+
       // Obtener lista de nombres de los autores
-      const nombresAutores = autores.map(autor => autor.nombre);
-  
+      const nombresAutores = autores.map((autor) => autor.nombre);
+
       // Consultar roles, facultades y carreras en la BD
       const rolResponse = await getRolFacultadCarrerabyname(nombresAutores);
-  
+
       if (!rolResponse.success || rolResponse.data.length === 0) {
-        throw new Error("No se encontró información de roles para los autores");
+        return callback({
+          success: false,
+          message: "No se encontró información de rol para los autores",
+          error: rolResponse.error,
+        });
       }
-  
+
       // Mapear los resultados a los autores originales
-      const autoresConRoles = autores.map(autor => {
-        const rolEncontrado = rolResponse.data.find(r => r.Nombre === autor.nombre);
+      const autoresConRoles = autores.map((autor) => {
+        const rolEncontrado = rolResponse.data.find(
+          (r) => r.Nombre === autor.nombre
+        );
         return {
           ...autor,
           id_rol: rolEncontrado ? rolEncontrado.id_rol : null,
@@ -470,17 +477,15 @@ module.exports = (io, socket) => {
         message: "Datos procesados correctamente",
         data: autoresProcesados,
       });
-  
     } catch (err) {
       console.error("Error al cargar el documento:", err);
       callback({
         success: false,
         message: "Error al cargar el documento",
-        error: err.message
+        error: err.message,
       });
     }
   });
-  
 
   socket.on("cargar_documento_producto", async (data, callback) => {
     try {
@@ -491,38 +496,55 @@ module.exports = (io, socket) => {
       const productos = await procesarArchivoProducto(documento_productos);
       console.log("Productos procesados correctamente:", productos.productos);
       // Obtener el rol enviando un JSON con un array de nombres
-      const rolResponse = await getRolFacultadCarrerabyname([productos.solicitante.nombre]);
+      const rolResponse = await getRolFacultadCarrerabyname([
+        productos.solicitante.nombre,
+      ]);
       if (!rolResponse.success || rolResponse.data.length === 0) {
-        throw new Error("No se encontró información de rol para el solicitante");
+        throw new Error(
+          "No se encontró información de rol para el solicitante"
+        );
       }
       // Buscar el resultado correcto
-      const rol = rolResponse.data.find(r => r.Nombre === productos.solicitante.nombre);
+      const rol = rolResponse.data.find(
+        (r) => r.Nombre === productos.solicitante.nombre
+      );
       if (!rol) {
-        throw new Error(`No se encontró coincidencia exacta para ${productos.solicitante.nombre}`);
+        throw new Error(
+          `No se encontró coincidencia exacta para ${productos.solicitante.nombre}`
+        );
       }
       // Insertar el rol en el objeto de la persona
       productos.solicitante.rol = rol.id_rol;
       productos.solicitante.facultad = rol.id_facultad;
       productos.solicitante.carrera = rol.id_carrera;
       // Procesar productos con su indicador
-      const productosConIndicador = await obtenerProductosConIndicador(codigo, productos.productos);
+      const productosConIndicador = await obtenerProductosConIndicador(
+        codigo,
+        productos.productos
+      );
       productos.productos = productosConIndicador;
       // Asignar el código obtenido
       productos.codigo = codigo;
-  
+
       return callback({
         success: true,
         message: "Documento mapeado correctamente",
         data: productos,
       });
-  
     } catch (err) {
       console.error("Error al cargar el documento:", err);
       callback({
         success: false,
         message: "Error al cargar el documento",
-        error: err.message
+        error: err.message,
       });
     }
+  });
+
+  //Evento para saber si se va a actualizar o insertar un registro
+  socket.on("comprobar_estado_registro", async (data, callback) => {
+    const { id_registro } = data;
+    const result = await getRegistroEnCurso(id_registro);
+    callback(result);
   });
 };

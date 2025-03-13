@@ -439,11 +439,11 @@ export const getRegistroData = async (id_registro: string) => {
   }
 };
 
-export const getRegistroEnCurso = async (id_registro: string): Promise<DatabaseResponse<boolean>> => {
+export const getRegistroEnCurso = async (
+  id_registro: string
+): Promise<DatabaseResponse<boolean>> => {
   try {
-    // Obtener la conexión a la base de datos
     const pool = await getConnection();
-    // Ejecutar la consulta para obtener el estado del registro
     const result = await pool
       .request()
       .input("id_registro", sql.VarChar, id_registro)
@@ -454,10 +454,21 @@ export const getRegistroEnCurso = async (id_registro: string): Promise<DatabaseR
           ELSE 'false'
         END AS en_curso
       `);
+
     const en_curso = result.recordset[0]?.en_curso === 'true';
-    return { success: true, data: en_curso, message: "Consulta ejecutada correctamente" };
+    
+    return { 
+      success: true, 
+      data: en_curso,
+      message: `El producto se va a ${en_curso ? "editar" : "crear"}` // Mensaje dinámico
+    };
+
   } catch (error) {
-    return { success: false, error: error, message: "Error en la consulta" };
+    return { 
+      success: false, 
+      error: error, 
+      message: "Error al verificar el producto del registro" 
+    };
   }
 };
 
