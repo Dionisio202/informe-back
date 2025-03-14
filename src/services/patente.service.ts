@@ -5,6 +5,8 @@ import {
   ProductoDatos,
   Documento,
 } from "../interfaces/patente.interfaces";
+import { DatabaseResponse } from "../interfaces/database.interfaces";
+const {similarityPercentage} = require("../utils/levenshtein.js");
 // Obtener Autoridades
 export const getAutoridades = async () => {
   try {
@@ -73,9 +75,6 @@ export const insertRegistro = async (
     if (!id_funcionario) {
       return { success: false, message: "El id_funcionario es obligatorio" };
     }
-    console.log("id_registro", id_registro);
-    console.log("id_funcionario", id_funcionario);
-    console.log("id_proceso", id_proceso);
     const pool = await getConnection();
 
     await pool
@@ -110,51 +109,49 @@ export const insertProductoDatos = async (
   data: ProductoDatos
 ): Promise<{ success: boolean; message: string }> => {
   try {
-    const { id_registro, jsonProductos, memorando } = data;
+    const { id_registro, jsonProductos, memorando, esEdicion } = data;
+    const operacion = esEdicion ? 1 : 0;
 
     if (!id_registro || !jsonProductos || !memorando) {
       return { success: false, message: "Todos los campos son obligatorios" };
     }
-    // Si jsonProductos es un string, lo parseamos; de lo contrario, lo usamos directamente.
+
+    // Parsear jsonProductos
     const datosDocumento =
-      typeof jsonProductos === "string"
-        ? JSON.parse(jsonProductos)
+      typeof jsonProductos === "string" 
+        ? JSON.parse(jsonProductos) 
         : jsonProductos;
-console.log("datosDocumento",datosDocumento);
-    // Asegurarse de que "productos" sea un objeto (si llegara a ser string, se parsea)
-    const productos =
-      typeof datosDocumento.productos === "string"
-        ? JSON.parse(datosDocumento.productos)
-        : datosDocumento.productos;
-    //Obtener un solo producto
-    let producto = await obtenerSiguienteProducto(memorando, productos);
-    if (!producto) {
-      return { success: false, message: "Ya se registraron todos los productos" };
-    }
-    producto.tipo = datosDocumento.tipo;
-    // Construir el objeto final que se enviará al SP
+
+    // Construir productoSeleccionado (no es un JSON, es un string)
+    const productoSeleccionado = {
+      nombre: datosDocumento.productoSeleccionado, // "Guia Complicaciones"
+      tipo: parseInt(datosDocumento.tipoMemorando, 10) // Convertir a número
+    };
+
+    // Construir JSON final
     const jsonData = JSON.stringify({
       id_registro,
-      productos: [producto],
+      productos: [productoSeleccionado], // Enviar como array
       autoridad: {
         nombre: datosDocumento.solicitante.nombre,
-        Rol: datosDocumento.solicitante.rol,
-        facultad: datosDocumento.solicitante.facultad,
+        Rol: parseInt(datosDocumento.solicitante.cargo, 10),
+        facultad: parseInt(datosDocumento.solicitante.facultad, 10)
       },
       proyecto: {
         nombre: datosDocumento.proyecto.titulo,
         codigo: datosDocumento.proyecto.resolucion.numero,
-        tipo: datosDocumento.proyecto.tipo,
+        tipo: datosDocumento.proyecto.tipo
       },
       memorando,
-      tipo: 1,
+      tipo: 1
     });
-
     const pool = await getConnection();
     await pool
       .request()
       .input("json", sql.NVarChar, jsonData)
-      .query(`EXEC DecidirOperacionRegistro @json`);
+      .input("esEdicion", sql.BIT, operacion)
+      .execute("DecidirOperacionRegistro");
+
     return { success: true, message: "Datos procesados correctamente" };
   } catch (err) {
     console.error("Error al procesar los datos:", err);
@@ -162,6 +159,7 @@ console.log("datosDocumento",datosDocumento);
   }
 };
 
+//Precedimiento Temporal
 const obtenerSiguienteProducto = async (
   memorando: string,
   productos: any[]
@@ -195,6 +193,39 @@ const obtenerSiguienteProducto = async (
     return productoNuevo;
   } catch (err) {
     return null;
+  }
+};
+
+export const obtenerProductosConIndicador = async (
+  memorando: string,
+  id_registro: string,
+  productos: any[]
+): Promise<any[]> => {
+  try {
+    if (!memorando || !productos?.length) return [];
+
+    const pool = await getConnection();
+    const result = await pool
+      .request()
+      .input("memorando", sql.NVarChar, memorando)
+      .input("id_registro_param", sql.VarChar, id_registro)
+      .execute("ObtenerProductosConIndicador");
+
+    const productosRegistrados = result.recordset;
+
+    // Combinar con la lista original y asignar indicador 0 a los no registrados
+    return productos.map((producto) => {
+      const encontrado = productosRegistrados.find(
+        (pr:any) => pr.nombre === producto.nombre
+      );
+      return {
+        ...producto,
+        indicador: encontrado ? encontrado.indicador : 0, // 0 si no existe
+      };
+    });
+  } catch (err) {
+    console.error("Error al obtener productos:", err);
+    return [];
   }
 };
 
@@ -291,22 +322,18 @@ export const getRegistrosDatos = async (): Promise<{
     const pool = await getConnection();
 
     const result = await pool.request().query(`
-SELECT 
-    p.nombre AS nombre_producto,
-    r.fecha_registro,
-    r.fecha_finalizacion,
-    r.estado,
-    r.estado_proceso,
-    f.Nombre AS facultad, 
-    r.id_registro
-FROM Registros r
-JOIN Productos p ON p.id_registro_per = r.id_registro
-JOIN Personas per ON per.id_persona = r.id_funcionario
-JOIN FacultadesCarreras f ON f.ID = per.id_facultad_carrera;
-`);
-
-    console.log("✅ Datos Extraidos con Exito");
-
+      SELECT 
+          p.nombre AS nombre_producto,
+          r.fecha_registro,
+          r.fecha_finalizacion,
+          r.estado,
+          r.estado_proceso,
+          f.Nombre AS facultad, 
+          r.id_registro
+      FROM Registros r
+      JOIN Productos p ON p.id_registro_per = r.id_registro
+      JOIN Personas per ON per.id_persona = r.id_funcionario
+      JOIN FacultadesCarreras f ON f.ID = per.id_facultad_carrera;`);
     return {
       success: true,
       message: "Datos Extraidos con Exito",
@@ -327,27 +354,34 @@ export const getFacultadesCarreras = async () => {
     // Obtener la conexión a la base de datos
     const pool = await getConnection();
     // Ejecutar la consulta para obtener las Facultades y Carreras
-    const result = await pool.request().query("EXEC ObtenerFacultadesYCarreras");
+    const result = await pool
+      .request()
+      .query("EXEC ObtenerFacultadesYCarreras");
+    return { success: true, data: result.recordset[0].ResultadoJSON };
+  } catch (error) {
+    return { success: false, error: error };
+  }
+};
+
+export const getRolFacultadCarrerabyname = async (nombres: string[]) => {
+  try {
+    const pool = await getConnection();
+
+    // Convertir el array de nombres en JSON
+    const jsonNombres = JSON.stringify({ nombres });
+
+    // Ejecutar el procedimiento almacenado
+    const result = await pool
+      .request()
+      .input("jsonNombres", sql.NVarChar, jsonNombres)
+      .execute("ObtenerRolFacultadCarreraPorNombre");
+
     return { success: true, data: result.recordset };
   } catch (error) {
     return { success: false, error: error };
   }
 };
 
-export const getRolFacultadCarrerabyname = async (nombre: string) => {
-  try {
-    // Obtener la conexión a la base de datos
-    const pool = await getConnection();
-    // Ejecutar la consulta para obtener las Facultades y Carreras
-    const result = await pool
-      .request()
-      .input("nombre", sql.VarChar, nombre)
-      .query("EXEC ObtenerRolFacultadCarreraPorNombre @nombre");
-    return { success: true, data: result.recordset };
-  } catch (error) {
-    return { success: false, error: error };
-  }
-}
 
 export const getRoles = async () => {
   try {
@@ -374,4 +408,105 @@ export const getProductobyRegistro = async (id_registro: string) => {
   } catch (error) {
     return { success: false, error: error };
   }
-}
+};
+
+export const getTiposProyecto = async () => {
+  try {
+    // Obtener la conexión a la base de datos
+    const pool = await getConnection();
+    // Ejecutar la consulta para obtener los tipos de proyectos
+    const result = await pool.request().query("SELECT * FROM TipoProyectos");
+    return { success: true, data: result.recordset };
+  } catch (error) {
+    return { success: false, error: error };
+  }
+};
+
+export const getRegistroData = async (id_registro: string) => {
+  try {
+    // Obtener la conexión a la base de datos
+    const pool = await getConnection();
+    // Ejecutar la consulta para obtener los datos del registro
+    const result = await pool
+      .request()
+      .input("id_registro", sql.VarChar, id_registro)
+      .query("EXEC ObtenerDatosRegistro @id_registro");
+    return { success: true, data: result.recordset };
+  } catch (error) {
+    return { success: false, error: error };
+  }
+};
+
+export const getRegistroEnCurso = async (
+  id_registro: string
+): Promise<DatabaseResponse<boolean>> => {
+  try {
+    const pool = await getConnection();
+    const result = await pool
+      .request()
+      .input("id_registro", sql.VarChar, id_registro)
+      .query(`
+        SELECT CASE 
+          WHEN EXISTS (SELECT 1 FROM Productos WHERE id_registro_per = @id_registro)
+          THEN 'true'
+          ELSE 'false'
+        END AS en_curso
+      `);
+
+    const en_curso = result.recordset[0]?.en_curso === 'true';
+    
+    return { 
+      success: true, 
+      data: en_curso,
+      message: `El producto se va a ${en_curso ? "editar" : "crear"}` // Mensaje dinámico
+    };
+
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error, 
+      message: "Error al verificar el producto del registro" 
+    };
+  }
+};
+
+// Función que, para cada nombre de facultad en el arreglo, retorna la(s) facultad(es) coincidentes
+const getFacultadesCarrerasbyNombreFacultad = async (nombres: string[]) => {
+  try {
+    const carrerasResponse = await getFacultadesCarreras();
+    if (!carrerasResponse.success) {
+      throw new Error("Error al obtener facultades y carreras");
+    }
+
+    let carrerasData: any;
+    // Verificar si la respuesta contiene un único registro con 'ResultadoJSON'
+    if (
+      carrerasResponse.data.length === 1 &&
+      carrerasResponse.data[0].ResultadoJSON
+    ) {
+      carrerasData = JSON.parse(carrerasResponse.data[0].ResultadoJSON);
+    } else {
+      carrerasData = carrerasResponse.data;
+    }
+
+    // Ajusta el umbral de similitud según tus necesidades (por ejemplo, 80%)
+    const umbral = 80;
+
+    // Para cada nombre enviado, buscar las facultades que cumplan el criterio
+    const resultados = nombres.map((nombre) => {
+      // Se obtienen todas las facultades que superen el umbral de similitud
+      const facultadesCoincidentes = carrerasData.filter((facultad: any) => {
+        const porcentaje = similarityPercentage(
+          nombre,
+          facultad.nombre_facultad // Asegúrate de que este campo coincide con el de tu BD
+        );
+        return porcentaje >= umbral;
+      });
+      return { nombreBuscado: nombre, facultades: facultadesCoincidentes };
+    });
+
+    return { success: true, data: resultados };
+  } catch (error: any) {
+    return { success: false, error: error.message || error };
+  }
+};
