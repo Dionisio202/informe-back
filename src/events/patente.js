@@ -489,12 +489,11 @@ module.exports = (io, socket) => {
 
   socket.on("cargar_documento_producto", async (data, callback) => {
     try {
-      const { documento_productos, documento_memorando } = data;
+      const { documento_productos, documento_memorando, id_registro } = data;
       // Extraer código del memorando
       const codigo = await extractMemoCode(documento_memorando);
       // Procesar archivo de productos
       const productos = await procesarArchivoProducto(documento_productos);
-      console.log("Productos procesados correctamente:", productos.productos);
       // Obtener el rol enviando un JSON con un array de nombres
       const rolResponse = await getRolFacultadCarrerabyname([
         productos.solicitante.nombre,
@@ -520,12 +519,13 @@ module.exports = (io, socket) => {
       // Procesar productos con su indicador
       const productosConIndicador = await obtenerProductosConIndicador(
         codigo,
+        id_registro,
         productos.productos
       );
       productos.productos = productosConIndicador;
       // Asignar el código obtenido
       productos.codigo = codigo;
-
+      console.log("Productos procesados correctamente:", productos);
       return callback({
         success: true,
         message: "Documento mapeado correctamente",

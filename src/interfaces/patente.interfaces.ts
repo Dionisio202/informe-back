@@ -13,6 +13,7 @@ export interface Registro {
     id_registro: string;
     jsonProductos: string;
     memorando: string;
+    esEdicion: number;
   }
   
   export interface Documento {

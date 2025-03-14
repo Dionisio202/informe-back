@@ -109,53 +109,49 @@ export const insertProductoDatos = async (
   data: ProductoDatos
 ): Promise<{ success: boolean; message: string }> => {
   try {
-    const { id_registro, jsonProductos, memorando } = data;
+    const { id_registro, jsonProductos, memorando, esEdicion } = data;
+    const operacion = esEdicion ? 1 : 0;
 
     if (!id_registro || !jsonProductos || !memorando) {
       return { success: false, message: "Todos los campos son obligatorios" };
     }
-    // Si jsonProductos es un string, lo parseamos; de lo contrario, lo usamos directamente.
+
+    // Parsear jsonProductos
     const datosDocumento =
-      typeof jsonProductos === "string"
-        ? JSON.parse(jsonProductos)
+      typeof jsonProductos === "string" 
+        ? JSON.parse(jsonProductos) 
         : jsonProductos;
-    // Asegurarse de que "productos" sea un objeto (si llegara a ser string, se parsea)
-    const productos =
-      typeof datosDocumento.productos === "string"
-        ? JSON.parse(datosDocumento.productos)
-        : datosDocumento.productos;
-    //Obtener un solo producto
-    let producto = await obtenerSiguienteProducto(memorando, productos);
-    if (!producto) {
-      return {
-        success: false,
-        message: "Ya se registraron todos los productos",
-      };
-    }
-    producto.tipo = datosDocumento.tipo;
-    // Construir el objeto final que se enviará al SP
+
+    // Construir productoSeleccionado (no es un JSON, es un string)
+    const productoSeleccionado = {
+      nombre: datosDocumento.productoSeleccionado, // "Guia Complicaciones"
+      tipo: parseInt(datosDocumento.tipoMemorando, 10) // Convertir a número
+    };
+
+    // Construir JSON final
     const jsonData = JSON.stringify({
       id_registro,
-      productos: [producto],
+      productos: [productoSeleccionado], // Enviar como array
       autoridad: {
         nombre: datosDocumento.solicitante.nombre,
-        Rol: datosDocumento.solicitante.rol,
-        facultad: datosDocumento.solicitante.facultad,
+        Rol: parseInt(datosDocumento.solicitante.cargo, 10),
+        facultad: parseInt(datosDocumento.solicitante.facultad, 10)
       },
       proyecto: {
         nombre: datosDocumento.proyecto.titulo,
         codigo: datosDocumento.proyecto.resolucion.numero,
-        tipo: datosDocumento.proyecto.tipo,
+        tipo: datosDocumento.proyecto.tipo
       },
       memorando,
-      tipo: 1,
+      tipo: 1
     });
-
     const pool = await getConnection();
     await pool
       .request()
       .input("json", sql.NVarChar, jsonData)
-      .query(`EXEC DecidirOperacionRegistro @json`);
+      .input("esEdicion", sql.BIT, operacion)
+      .execute("DecidirOperacionRegistro");
+
     return { success: true, message: "Datos procesados correctamente" };
   } catch (err) {
     console.error("Error al procesar los datos:", err);
@@ -202,6 +198,7 @@ const obtenerSiguienteProducto = async (
 
 export const obtenerProductosConIndicador = async (
   memorando: string,
+  id_registro: string,
   productos: any[]
 ): Promise<any[]> => {
   try {
@@ -211,6 +208,7 @@ export const obtenerProductosConIndicador = async (
     const result = await pool
       .request()
       .input("memorando", sql.NVarChar, memorando)
+      .input("id_registro_param", sql.VarChar, id_registro)
       .execute("ObtenerProductosConIndicador");
 
     const productosRegistrados = result.recordset;
