@@ -109,7 +109,7 @@ export const insertProductoDatos = async (
   data: ProductoDatos
 ): Promise<{ success: boolean; message: string }> => {
   try {
-    const { id_registro, jsonProductos, memorando, esEdicion } = data;
+    const { id_registro, jsonProductos, memorando, esEdicion, id_tarea } = data; // Añadido id_tarea
     const operacion = esEdicion ? 1 : 0;
 
     if (!id_registro || !jsonProductos || !memorando) {
@@ -143,7 +143,8 @@ export const insertProductoDatos = async (
         tipo: datosDocumento.proyecto.tipo
       },
       memorando,
-      tipo: 1
+      tipo: 1,
+      id_tarea: id_tarea // Añadir el ID de tarea al JSON
     });
     const pool = await getConnection();
     await pool

@@ -137,12 +137,12 @@ LEFT JOIN [onlyoffice].[dbo].[FacultadesCarreras] fcFac
           const documentosResult = await pool.request()
             .input("id_tarea_per", sql.VarChar, tarea.id)
             .query(`
-              SELECT 
-                codigo_documento AS id,
-                codigo_almacenamiento AS name,
+                SELECT 
+                id_documento AS id,
+                codigo_documento AS name,
                 codigo_almacenamiento AS path
               FROM [onlyoffice].[dbo].[Documentos]
-              WHERE id_tarea_per = @id_tarea_per
+              WHERE id_tarea_per = @id_tarea_per;
             `);
           
           // Agregar archivos solo si hay documentos

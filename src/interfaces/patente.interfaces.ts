@@ -14,6 +14,7 @@ export interface Registro {
     jsonProductos: string;
     memorando: string;
     esEdicion: number;
+    id_tarea?: string;
   }
   
   export interface Documento {
