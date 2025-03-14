@@ -140,51 +140,81 @@ module.exports = (io, socket) => {
   });
 
   // Evento para guardar los estados temporales de los formularios
-  socket.on("guardar_estado_temporal", async (data, callback) => {
-    try {
-      const {
-        id_registro,
-        id_tarea,
-        jsonData,
-        id_funcionario,
-        estado,
-        nombre_tarea,
-      } = data; // Extraer los datos del objeto data
+ // Evento para guardar los estados temporales de los formularios
+socket.on("guardar_estado_temporal", async (data, callback) => {
+  try {
+    const {
+      id_registro,
+      id_tarea,
+      jsonData,
+      id_funcionario,
+      estado,
+      nombre_tarea,
+      eliminar_documentos
+    } = data; // Extraer los datos del objeto data
 
-      //id combinado
-      const id_combinado = id_registro + "-" + id_tarea;
-
-      // Obtener la conexión a la base de datos
-      const pool = await getConnection();
-
-      // Usar MERGE para hacer un "upsert" (insertar o actualizar)
-      await pool
-        .request()
-        .input("id_registro", sql.VarChar, id_registro)
-        .input("id_tarea", sql.VarChar, id_combinado)
-        .input("jsonData", sql.VarChar, jsonData)
-        .input("id_funcionario", sql.Int, id_funcionario)
-        .input("estado", sql.VarChar, estado)
-        .input("nombre_tarea", sql.VarChar, nombre_tarea)
-        .query(
-          "EXEC UpsertTareaInstancia @id_registro, @id_tarea, @jsonData, @id_funcionario, @estado, @nombre_tarea"
-        );
-      console.log("Estado temporal guardado o actualizado correctamente");
-
-      // Enviar respuesta de éxito al cliente
-      callback({
-        success: true,
-        message: "Estado temporal guardado o actualizado correctamente",
-      });
-    } catch (err) {
-      console.error("Error al guardar o actualizar el estado temporal:", err);
-      callback({
+    // Validar los parámetros mínimos requeridos
+    if (!id_registro || !id_tarea || !estado) {
+      return callback({
         success: false,
-        message: "Error al guardar o actualizar el estado temporal",
+        message: "Faltan parámetros requeridos: id_registro, id_tarea y estado son obligatorios"
       });
     }
-  });
 
+    //id combinado
+    const id_combinado = id_registro + "-" + id_tarea;
+
+    // Obtener la conexión a la base de datos
+    const pool = await getConnection();
+    
+    // Crear la solicitud SQL
+    const request = pool.request()
+      .input("id_registro", sql.VarChar, id_registro)
+      .input("id_tarea", sql.VarChar, id_combinado)
+      .input("jsonData", sql.VarChar, jsonData)
+      .input("id_funcionario", sql.Int, id_funcionario)
+      .input("estado", sql.VarChar, estado)
+      .input("nombre_tarea", sql.VarChar, nombre_tarea);
+
+    let result;
+    
+    // Ejecutar el procedimiento con o sin el parámetro eliminar_documentos
+    if (eliminar_documentos !== undefined) {
+      request.input("eliminar_documentos", sql.Bit, eliminar_documentos ? 1 : 0);
+      result = await request.query(
+        "EXEC UpsertTareaInstancia @id_registro, @id_tarea, @jsonData, @id_funcionario, @estado, @nombre_tarea, @eliminar_documentos"
+      );
+    } else {
+      result = await request.query(
+        "EXEC UpsertTareaInstancia @id_registro, @id_tarea, @jsonData, @id_funcionario, @estado, @nombre_tarea"
+      );
+    }
+
+    console.log("Estado temporal guardado o actualizado correctamente");
+
+    // Preparar la respuesta, incluyendo los resultados del procedimiento si están disponibles
+    const response = {
+      success: true,
+      message: "Estado temporal guardado o actualizado correctamente"
+    };
+
+    // Añadir información de resultado si está disponible
+    if (result && result.recordset && result.recordset.length > 0) {
+      response.tareaID = result.recordset[0].TareaID;
+      response.documentosInfo = result.recordset[0].DocumentosInfo;
+    }
+
+    // Enviar respuesta de éxito al cliente
+    callback(response);
+  } catch (err) {
+    console.error("Error al guardar o actualizar el estado temporal:", err);
+    callback({
+      success: false,
+      message: "Error al guardar o actualizar el estado temporal",
+      error: err.message
+    });
+  }
+});
   // Evento para traer los estados temporales de los formularios guardados segun el id_registro y id_tarea
   socket.on("obtener_estado_temporal", async (data, callback) => {
     try {
