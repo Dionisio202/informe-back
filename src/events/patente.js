@@ -419,7 +419,7 @@ socket.on("guardar_estado_temporal", async (data, callback) => {
   socket.on("datos_proceso", async (callback) => {
     try {
       const pool = await getConnection();
-      const result = await pool.request().query("EXEC GenerarJSONProceso");
+      const result = await pool.request().execute("GenerarJSONProceso");
       // Acceder a la propiedad ResultadoJSON de la primera fila
       const jsonData = result.recordset[0].ResultadoJSON;
       return callback({
