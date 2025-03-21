@@ -8,6 +8,7 @@ const {
   getTiposProductos,
   insertProceso,
   insertRegistro,
+  insertUsuario,
   saveDocument,
   insertProductoDatos,
   getRegistrosDatos,
@@ -41,6 +42,14 @@ module.exports = (io, socket) => {
   // Evento para generar un registro de patente
   socket.on("iniciar_registro", async (data, callback) => {
     try {
+      // Validar usuario
+      const usuarioResult = await insertUsuario({
+        id : data.id_funcionario,
+        nombre : data.nombre_funcionario,
+      });
+      if (!usuarioResult.success) {
+        return callback(usuarioResult);
+      }
       // 1️⃣ Insertar/verificar el proceso
       const procesoResult = await insertProceso({
         id_proceso: data.id_proceso,
@@ -419,7 +428,7 @@ socket.on("guardar_estado_temporal", async (data, callback) => {
   socket.on("datos_proceso", async (callback) => {
     try {
       const pool = await getConnection();
-      const result = await pool.request().query("EXEC GenerarJSONProceso");
+      const result = await pool.request().execute("GenerarJSONProceso");
       // Acceder a la propiedad ResultadoJSON de la primera fila
       const jsonData = result.recordset[0].ResultadoJSON;
       return callback({
