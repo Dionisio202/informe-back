@@ -212,8 +212,12 @@ router.post("/get-document", async (req, res) => {
   // Extraer el nombre base sin la extensión
   const baseName = path.basename(nombre, ext);
 
-  // Reemplazar espacios, puntos y paréntesis en el nombre base por guiones bajos
-  const transformedBaseName = baseName.replace(/\s+/g, "_").replace(/[.\(\)]/g, "_");
+  // Primero normalizar los caracteres con tildes
+  const normalizedBaseName = baseName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  // Reemplazar espacios, puntos, paréntesis y otros caracteres especiales por guiones bajos
+  const transformedBaseName = normalizedBaseName.replace(/[\s.\(\)\[\]\{\},;:'"!@#$%^&*=+|\\/<>?]/g, "_");
+
 
   // Concatenar el nombre transformado con la extensión original
   const nombreFormateado = transformedBaseName + ext;
@@ -222,7 +226,7 @@ router.post("/get-document", async (req, res) => {
     let pool = await getConnection();
     let checkResult = await pool
       .request()
-      .input("codigo_almacenamiento", sql.VarChar(100), nombreFormateado)
+      .input("codigo_almacenamiento", sql.VarChar(500), nombreFormateado)
       .query("SELECT COUNT(*) AS count FROM Documentos WHERE codigo_almacenamiento = @codigo_almacenamiento");
 
     const documentExists = checkResult.recordset[0].count > 0;
@@ -247,9 +251,9 @@ router.post("/get-document", async (req, res) => {
       // Insertar el registro en la base de datos
       await pool.request()
       .input("id_registro_per", sql.VarChar(50), id_registro_per)
-      .input("codigo_almacenamiento", sql.VarChar(100), nombreFormateado)
+      .input("codigo_almacenamiento", sql.VarChar(500), nombreFormateado)
       .input("id_tipo_documento", sql.Int, id_tipo_documento)
-      .input("codigo_documento", sql.VarChar(100), memorando)
+      .input("codigo_documento", sql.VarChar(500), memorando)
       .input("id_tarea_per", sql.VarChar(100), id_tarea_per)
       .query(
         `INSERT INTO Documentos 
