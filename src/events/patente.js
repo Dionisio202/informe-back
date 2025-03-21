@@ -8,6 +8,7 @@ const {
   getTiposProductos,
   insertProceso,
   insertRegistro,
+  insertUsuario,
   saveDocument,
   insertProductoDatos,
   getRegistrosDatos,
@@ -41,6 +42,14 @@ module.exports = (io, socket) => {
   // Evento para generar un registro de patente
   socket.on("iniciar_registro", async (data, callback) => {
     try {
+      // Validar usuario
+      const usuarioResult = await insertUsuario({
+        id : data.id_funcionario,
+        nombre : data.nombre_funcionario,
+      });
+      if (!usuarioResult.success) {
+        return callback(usuarioResult);
+      }
       // 1️⃣ Insertar/verificar el proceso
       const procesoResult = await insertProceso({
         id_proceso: data.id_proceso,

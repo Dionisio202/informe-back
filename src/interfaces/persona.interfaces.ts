@@ -17,3 +17,11 @@ export interface Autor extends Persona {
     id_autor: number;
     porcentaje_participacion: number;
 }
+
+export interface user {
+    id: number;
+    nombre: string;
+    email?: string;
+    FechaRegistro?: Date;
+    Password?: string;
+}

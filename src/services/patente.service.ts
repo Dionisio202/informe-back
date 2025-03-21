@@ -1,3 +1,4 @@
+import { DatabaseResponse } from "./../interfaces/database.interfaces";
 const { getConnection, sql } = require("../config/Conecction_SQL_Server");
 import {
   Registro,
@@ -5,8 +6,8 @@ import {
   ProductoDatos,
   Documento,
 } from "../interfaces/patente.interfaces";
-import { DatabaseResponse } from "../interfaces/database.interfaces";
-const {similarityPercentage} = require("../utils/levenshtein.js");
+import { user } from "../interfaces/persona.interfaces";
+const { similarityPercentage } = require("../utils/levenshtein.js");
 // Obtener Autoridades
 export const getAutoridades = async () => {
   try {
@@ -28,6 +29,47 @@ export const getTiposProductos = async () => {
     return { success: true, data: result.recordset };
   } catch (error) {
     return { success: false, error: error };
+  }
+};
+
+export const insertUsuario = async (
+  usuario: user
+): Promise<DatabaseResponse<never>> => {
+  try {
+    const { id, nombre } = usuario;
+    const email = `${nombre}@default.com`; // Generar email automático
+    const password = nombre; // La contraseña será el nombre
+
+    const pool = await getConnection();
+    await pool
+      .request()
+      .input("id", sql.Int, id)
+      .input("nombre", sql.VarChar, nombre)
+      .input("email", sql.VarChar, email)
+      .input("password", sql.VarChar, password)
+      .query(`
+          SET IDENTITY_INSERT Usuarios ON;
+          MERGE INTO Usuarios AS target
+          USING (VALUES (@id, @nombre, @email, @Password)) 
+          AS source (id, nombre, email, Password)
+          ON target.id = source.id
+          WHEN NOT MATCHED THEN
+              INSERT (id, nombre, email, FechaRegistro, Password)
+              VALUES (source.id, source.nombre, source.email, GETDATE(), source.Password);
+          SET IDENTITY_INSERT Usuarios OFF;
+        `);
+
+    console.log("Usuario registrado/verificado correctamente");
+    return {
+      success: true,
+      message: "Usuario registrado/verificado correctamente",
+    };
+  } catch (err) {
+    console.error("Error al registrar/verificar el usuario:", err);
+    return {
+      success: false,
+      message: "Error al registrar/verificar el usuario",
+    };
   }
 };
 
@@ -118,14 +160,14 @@ export const insertProductoDatos = async (
 
     // Parsear jsonProductos
     const datosDocumento =
-      typeof jsonProductos === "string" 
-        ? JSON.parse(jsonProductos) 
+      typeof jsonProductos === "string"
+        ? JSON.parse(jsonProductos)
         : jsonProductos;
 
     // Construir productoSeleccionado (no es un JSON, es un string)
     const productoSeleccionado = {
       nombre: datosDocumento.productoSeleccionado, // "Guia Complicaciones"
-      tipo: parseInt(datosDocumento.tipoMemorando, 10) // Convertir a número
+      tipo: parseInt(datosDocumento.tipoMemorando, 10), // Convertir a número
     };
 
     // Construir JSON final
@@ -135,15 +177,15 @@ export const insertProductoDatos = async (
       autoridad: {
         nombre: datosDocumento.solicitante.nombre,
         Rol: parseInt(datosDocumento.solicitante.cargo, 10),
-        facultad: parseInt(datosDocumento.solicitante.facultad, 10)
+        facultad: parseInt(datosDocumento.solicitante.facultad, 10),
       },
       proyecto: {
         nombre: datosDocumento.proyecto.titulo,
         codigo: datosDocumento.proyecto.resolucion.numero,
-        tipo: datosDocumento.proyecto.tipo
+        tipo: datosDocumento.proyecto.tipo,
       },
       memorando,
-      tipo: 1
+      tipo: 1,
     });
     const pool = await getConnection();
     await pool
@@ -216,7 +258,7 @@ export const obtenerProductosConIndicador = async (
     // Combinar con la lista original y asignar indicador 0 a los no registrados
     return productos.map((producto) => {
       const encontrado = productosRegistrados.find(
-        (pr:any) => pr.nombre === producto.nombre
+        (pr: any) => pr.nombre === producto.nombre
       );
       return {
         ...producto,
@@ -382,7 +424,6 @@ export const getRolFacultadCarrerabyname = async (nombres: string[]) => {
   }
 };
 
-
 export const getRoles = async () => {
   try {
     // Obtener la conexión a la base de datos
@@ -444,8 +485,7 @@ export const getRegistroEnCurso = async (
     const pool = await getConnection();
     const result = await pool
       .request()
-      .input("id_registro", sql.VarChar, id_registro)
-      .query(`
+      .input("id_registro", sql.VarChar, id_registro).query(`
         SELECT CASE 
           WHEN EXISTS (SELECT 1 FROM Productos WHERE id_registro_per = @id_registro)
           THEN 'true'
@@ -453,19 +493,18 @@ export const getRegistroEnCurso = async (
         END AS en_curso
       `);
 
-    const en_curso = result.recordset[0]?.en_curso === 'true';
-    
-    return { 
-      success: true, 
-      data: en_curso,
-      message: `El producto se va a ${en_curso ? "editar" : "crear"}` // Mensaje dinámico
-    };
+    const en_curso = result.recordset[0]?.en_curso === "true";
 
+    return {
+      success: true,
+      data: en_curso,
+      message: `El producto se va a ${en_curso ? "editar" : "crear"}`, // Mensaje dinámico
+    };
   } catch (error) {
-    return { 
-      success: false, 
-      error: error, 
-      message: "Error al verificar el producto del registro" 
+    return {
+      success: false,
+      error: error,
+      message: "Error al verificar el producto del registro",
     };
   }
 };
