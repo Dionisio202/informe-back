@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
   secure: false,                 // false para usar STARTTLS (no SSL directo)
   auth: {
     user: "eortiz5364@uta.edu.ec", 
-    pass: "!dionisio202"
+    pass: "tvdnbcswljxrxmpf"
   },
   tls: {
     rejectUnauthorized: false
