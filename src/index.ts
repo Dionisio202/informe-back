@@ -1,5 +1,6 @@
 import http from 'http';
 import { Server } from 'socket.io';
+import fs from 'fs';
 const cors = require("cors");
 // Importar eventos
 const authEvents = require('./events/auth');
@@ -14,10 +15,12 @@ const documentos = require('./events/documentos');
 import documentosRoutes from './routes/documentos.routes';
 
 require('dotenv').config();
-
+const router = express.Router();
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+
 const server = http.createServer(app);
 app.use(cors({
     origin: process.env.CORS_ORIGIN,
@@ -26,9 +29,12 @@ app.use(cors({
     credentials: true
 }));
 const io = new Server(server, {
+    path: "/doc/socket.io",
     cors: {
         origin: process.env.CORS_ORIGIN,
         methods: ['GET', 'POST'],
+        allowedHeaders: ["Content-Type", "Authorization"],
+        credentials: true 
     },
 });
 const morgan = require('morgan');
@@ -38,12 +44,13 @@ const PORT = 3001;
 // Middleware
 app.use(morgan('dev'));
 
-// Ruta de prueba HTTP
-app.get('/', (req:any, res:any) => {
+// Ruta de prueba http
+router.get('/', (req:any, res:any) => {
     res.send('Hello World! websocket');
 });
 
-app.use('/api', documentosRoutes);
+// Usar las rutas de documentos
+router.use('/api', documentosRoutes);
 
 // Manejo de conexiones WebSocket
 io.on('connection', (socket) => {
@@ -67,6 +74,8 @@ io.on('connection', (socket) => {
         console.log(`Cliente desconectado: ${socket.id}`);
     });
 });
+
+app.use('/doc/', router);
 
 // Iniciar el servidor
 server.listen(PORT, () => {
